@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Netflix Clone MERN - Detailed Functional Diagram</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/10.6.1/mermaid.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #0a0e27;
+            color: #fff;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+            background: linear-gradient(45deg, #e94560, #f39c12);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #aaa;
+            font-size: 1.1em;
+        }
+
+        .diagram-container {
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            overflow-x: auto;
+        }
+
+        .mermaid {
+            display: flex;
+            justify-content: center;
+            background: white;
+            padding: 40px;
+            border-radius: 8px;
+        }
+
+        .info-section {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .info-section h2 {
+            color: #f39c12;
+            margin-bottom: 20px;
+            font-size: 1.8em;
+            border-bottom: 2px solid rgba(255, 255, 255, 0.2);
+            padding-bottom: 10px;
+        }
+
+        .component-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .component-card {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
+            border-radius: 10px;
+            padding: 20px;
+            border-left: 4px solid;
+            transition: transform 0.3s ease;
+        }
+
+        .component-card:hover {
+            transform: translateX(5px);
+        }
+
+        .component-card.client { border-color: #667eea; }
+        .component-card.edge { border-color: #f093fb; }
+        .component-card.backend { border-color: #4facfe; }
+        .component-card.data { border-color: #43e97b; }
+
+        .component-card h3 {
+            margin-bottom: 10px;
+            font-size: 1.3em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .component-card p {
+            color: #ccc;
+            line-height: 1.6;
+            margin-bottom: 10px;
+        }
+
+        .component-card ul {
+            list-style: none;
+            padding-left: 0;
+            margin-top: 10px;
+        }
+
+        .component-card li {
+            padding: 5px 0;
+            padding-left: 20px;
+            position: relative;
+            color: #ddd;
+            font-size: 0.95em;
+        }
+
+        .component-card li:before {
+            content: "▸";
+            position: absolute;
+            left: 0;
+            color: #e94560;
+        }
+
+        .flow-step {
+            background: rgba(255, 255, 255, 0.08);
+            padding: 20px;
+            margin-bottom: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #e94560;
+            display: flex;
+            gap: 20px;
+        }
+
+        .step-number {
+            background: linear-gradient(135deg, #e94560, #f39c12);
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 1.2em;
+            flex-shrink: 0;
+        }
+
+        .step-content {
+            flex: 1;
+        }
+
+        .step-content h4 {
+            margin-bottom: 8px;
+            color: #f39c12;
+        }
+
+        .step-content p {
+            color: #ccc;
+            line-height: 1.6;
+        }
+
+        code {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 2px 6px;
+            border-radius: 4px;
+            color: #4facfe;
+            font-family: 'Courier New', monospace;
+        }
+
+        @media (max-width: 768px) {
+            .component-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            h1 {
+                font-size: 1.8em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎬 Netflix Clone - MERN Stack Functional Diagram</h1>
+        <p class="subtitle">Complete Architecture with Data Flow & Component Interactions</p>
+
+        <div class="diagram-container">
+            <div class="mermaid">
+flowchart TD
+    subgraph ClientLayer["📱 CLIENT LAYER"]
+        A[React SPA<br/>Homepage, Browse,<br/>Player, Profile]
+        B[Mobile App / PWA<br/>Offline Support]
+    end
+
+    subgraph Edge["🌐 EDGE LAYER"]
+        CDN[CDN / Edge Cache<br/>Static Assets,<br/>Video Segments]
+        LB[Load Balancer<br/>Traffic Distribution]
+    end
+
+    subgraph Backend["⚙️ BACKEND SERVICES"]
+        API[Node + Express API<br/>Metadata, Auth,<br/>Watch Progress]
+        Auth[Auth Service<br/>JWT / OAuth<br/>Token Management]
+        Transcoder[Transcoding Service<br/>HLS/DASH<br/>Adaptive Bitrate]
+        MediaOrigin[Media Origin Server<br/>Signed URLs<br/>Content Protection]
+        Websocket[WebSocket Service<br/>Real-time Chat,<br/>Notifications]
+        Payment[Payment Gateway<br/>Stripe/PayPal<br/>Subscriptions]
+    end
+
+    subgraph Data["💾 DATA LAYER"]
+        Mongo[(MongoDB<br/>Users, Catalog,<br/>Subscriptions,<br/>Watchlist)]
+        Redis[(Redis Cache<br/>Sessions,<br/>Rate-limit,<br/>Fast lookups)]
+        Blob[(Object Storage<br/>S3 / MinIO<br/>Videos, Thumbnails)]
+        Analytics[(Analytics DB<br/>Clickstream,<br/>Events, QoS)]
+    end
+
+    subgraph Admin["👨‍💼 ADMIN"]
+        AdminPanel[Admin Dashboard<br/>Content Management,<br/>User Moderation]
+    end
+
+    A -->|API calls<br/>metadata, auth| LB
+    B -->|API calls<br/>metadata, auth| LB
+    LB --> API
+    
+    A -->|Stream URL<br/>request| CDN
+    B -->|Stream URL<br/>request| CDN
+    CDN -->|Cache miss<br/>fetch content| MediaOrigin
+    
+    API -->|Auth checks<br/>+ tokens| Auth
+    API -->|Catalog queries<br/>CRUD operations| Mongo
+    API -->|Cache read/write<br/>session mgmt| Redis
+    API -->|Request<br/>transcoding| Transcoder
+    API -->|Payment ops<br/>webhooks| Payment
+    API -->|Analytics events<br/>user behavior| Analytics
+    
+    Transcoder -->|Store renditions<br/>HLS/DASH| Blob
+    MediaOrigin -->|Fetch videos<br/>thumbnails| Blob
+    
+    Websocket -.->|Push notifications<br/>real-time updates| A
+    Websocket -.->|Push notifications<br/>real-time updates| B
+    
+    AdminPanel -->|Manage content<br/>users, catalog| API
+    AdminPanel -->|Direct DB<br/>operations| Mongo
+
+    classDef clientStyle fill:#667eea,stroke:#764ba2,stroke-width:2px,color:#fff
+    classDef edgeStyle fill:#f093fb,stroke:#f5576c,stroke-width:2px,color:#fff
+    classDef backendStyle fill:#4facfe,stroke:#00f2fe,stroke-width:2px,color:#fff
+    classDef dataStyle fill:#43e97b,stroke:#38f9d7,stroke-width:2px,color:#fff
+    classDef adminStyle fill:#f39c12,stroke:#e94560,stroke-width:2px,color:#fff
+
+    class A,B clientStyle
+    class CDN,LB edgeStyle
+    class API,Auth,Transcoder,MediaOrigin,Websocket,Payment backendStyle
+    class Mongo,Redis,Blob,Analytics dataStyle
+    class AdminPanel adminStyle
+            </div>
+        </div>
+
+        <!-- Component Details -->
+        <div class="info-section">
+            <h2>📦 Component Responsibilities</h2>
+            <div class="component-grid">
+                <div class="component-card client">
+                    <h3>💻 React SPA</h3>
+                    <p><strong>Purpose:</strong> Primary user interface for desktop/web</p>
+                    <ul>
+                        <li>Browse and search catalog</li>
+                        <li>User profile and settings management</li>
+                        <li>Offline watchlist functionality</li>
+                        <li>HLS/DASH video player integration</li>
+                        <li>DRM content protection handling</li>
+                        <li>Progressive image loading</li>
+                    </ul>
+                </div>
+
+                <div class="component-card client">
+                    <h3>📱 Mobile App / PWA</h3>
+                    <p><strong>Purpose:</strong> Cross-platform mobile experience</p>
+                    <ul>
+                        <li>Offline playback capabilities</li>
+                        <li>Push notification support</li>
+                        <li>Responsive adaptive layouts</li>
+                        <li>Download management</li>
+                        <li>Background sync for watch progress</li>
+                    </ul>
+                </div>
+
+                <div class="component-card edge">
+                    <h3>☁️ CDN / Edge Cache</h3>
+                    <p><strong>Purpose:</strong> Global content delivery network</p>
+                    <ul>
+                        <li>Serve video manifests and segments</li>
+                        <li>Cache static assets (JS, CSS, images)</li>
+                        <li>Signed URL validation at edge</li>
+                        <li>Geographic load distribution</li>
+                        <li>DDoS protection and rate limiting</li>
+                        <li>Low-latency content delivery</li>
+                    </ul>
+                </div>
+
+                <div class="component-card edge">
+                    <h3>⚖️ Load Balancer</h3>
+                    <p><strong>Purpose:</strong> Distribute API traffic efficiently</p>
+                    <ul>
+                        <li>Round-robin or weighted routing</li>
+                        <li>Health checks for backend services</li>
+                        <li>SSL/TLS termination</li>
+                        <li>Session persistence (sticky sessions)</li>
+                        <li>Request queuing and throttling</li>
+                    </ul>
+                </div>
+
+                <div class="component-card backend">
+                    <h3>🔧 Node + Express API</h3>
+                    <p><strong>Purpose:</strong> Core application backend</p>
+                    <ul>
+                        <li>RESTful API endpoints for catalog</li>
+                        <li>User authentication and authorization</li>
+                        <li>Watch progress tracking</li>
+                        <li>Recommendation engine triggers</li>
+                        <li>Search and filtering logic</li>
+                        <li>Payment webhook handlers</li>
+                        <li>User settings and preferences</li>
+                    </ul>
+                </div>
+
+                <div class="component-card backend">
+                    <h3>🔐 Auth Service</h3>
+                    <p><strong>Purpose:</strong> Identity and access management</p>
+                    <ul>
+                        <li>JWT token generation and validation</li>
+                        <li>Refresh token rotation</li>
+                        <li>OAuth2 integration (Google, Facebook)</li>
+                        <li>Password hashing and verification</li>
+                        <li>Multi-factor authentication (MFA)</li>
+                        <li>Session management</li>
+                    </ul>
+                </div>
+
+                <div class="component-card backend">
+                    <h3>🎥 Transcoding Service</h3>
+                    <p><strong>Purpose:</strong> Video processing and optimization</p>
+                    <ul>
+                        <li>Convert master files to multiple bitrates</li>
+                        <li>Generate HLS/DASH manifests</li>
+                        <li>Create thumbnails and preview clips</li>
+                        <li>Subtitle and closed caption processing</li>
+                        <li>Video quality analysis</li>
+                        <li>Queue-based job processing</li>
+                    </ul>
+                </div>
+
+                <div class="component-card backend">
+                    <h3>📡 Media Origin Server</h3>
+                    <p><strong>Purpose:</strong> Secure content delivery origin</p>
+                    <ul>
+                        <li>Generate time-limited signed URLs</li>
+                        <li>Token-based access control</li>
+                        <li>Serve manifest files to CDN</li>
+                        <li>Handle origin fetch requests</li>
+                        <li>Implement geo-blocking rules</li>
+                    </ul>
+                </div>
+
+                <div class="component-card backend">
+                    <h3>⚡ WebSocket Service</h3>
+                    <p><strong>Purpose:</strong> Real-time bidirectional communication</p>
+                    <ul>
+                        <li>Push notifications for new content</li>
+                        <li>Live chat and social features</li>
+                        <li>Watch party synchronization</li>
+                        <li>Real-time recommendations</li>
+                        <li>Connection state management</li>
+                    </ul>
+                </div>
+
+                <div class="component-card backend">
+                    <h3>💳 Payment Gateway</h3>
+                    <p><strong>Purpose:</strong> Subscription and billing management</p>
+                    <ul>
+                        <li>Stripe/PayPal API integration</li>
+                        <li>Subscription creation and updates</li>
+                        <li>Payment webhook processing</li>
+                        <li>Billing cycle management</li>
+                        <li>Invoice generation</li>
+                        <li>Payment failure handling</li>
+                    </ul>
+                </div>
+
+                <div class="component-card data">
+                    <h3>🍃 MongoDB</h3>
+                    <p><strong>Purpose:</strong> Primary application database</p>
+                    <ul>
+                        <li>User profiles and credentials</li>
+                        <li>Content catalog (movies, series)</li>
+                        <li>Subscription plans and status</li>
+                        <li>Watch history and progress</li>
+                        <li>User reviews and ratings</li>
+                        <li>Watchlist and favorites</li>
+                        <li>Comments and social interactions</li>
+                    </ul>
+                </div>
+
+                <div class="component-card data">
+                    <h3>⚡ Redis Cache</h3>
+                    <p><strong>Purpose:</strong> High-performance caching layer</p>
+                    <ul>
+                        <li>Session storage (user sessions)</li>
+                        <li>API response caching</li>
+                        <li>Rate limiting counters</li>
+                        <li>Hot content metadata (homepage)</li>
+                        <li>Leaderboards and trending lists</li>
+                        <li>Temporary token storage</li>
+                    </ul>
+                </div>
+
+                <div class="component-card data">
+                    <h3>🗄️ Object Storage (S3/MinIO)</h3>
+                    <p><strong>Purpose:</strong> Large file storage</p>
+                    <ul>
+                        <li>Original video master files</li>
+                        <li>Transcoded video renditions</li>
+                        <li>Thumbnails and poster images</li>
+                        <li>Subtitle and caption files</li>
+                        <li>User-generated content</li>
+                        <li>Backup and archive storage</li>
+                    </ul>
+                </div>
+
+                <div class="component-card data">
+                    <h3>📊 Analytics DB</h3>
+                    <p><strong>Purpose:</strong> Business intelligence and metrics</p>
+                    <ul>
+                        <li>User clickstream data</li>
+                        <li>Video playback events</li>
+                        <li>Quality of Service (QoS) metrics</li>
+                        <li>Conversion funnel tracking</li>
+                        <li>A/B test results</li>
+                        <li>User engagement metrics</li>
+                    </ul>
+                </div>
+
+                <div class="component-card data">
+                    <h3>👨‍💼 Admin Dashboard</h3>
+                    <p><strong>Purpose:</strong> Content and system management</p>
+                    <ul>
+                        <li>Upload and manage content catalog</li>
+                        <li>User moderation and support</li>
+                        <li>Monitor transcoding job queues</li>
+                        <li>View analytics and reports</li>
+                        <li>Configure system settings</li>
+                        <li>Manage subscriptions and billing</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- User Flow -->
+        <div class="info-section">
+            <h2>🎯 Detailed User Playback Flow</h2>
+            
+            <div class="flow-step">
+                <div class="step-number">1</div>
+                <div class="step-content">
+                    <h4>Initial App Load</h4>
+                    <p>User opens React app → Frontend sends GET request to <code>/api/home</code> → API queries Redis cache for homepage data → If cache miss, fetch from MongoDB and populate cache → Return curated content rows (trending, recommended, continue watching)</p>
+                </div>
+            </div>
+
+            <div class="flow-step">
+                <div class="step-number">2</div>
+                <div class="step-content">
+                    <h4>Browse & Search</h4>
+                    <p>User scrolls or searches → React sends <code>GET /api/catalog?genre=action&page=2</code> → API checks Redis for cached results → Node queries MongoDB with filters and pagination → Returns metadata with thumbnail URLs from CDN</p>
+                </div>
+            </div>
+
+            <div class="flow-step">
+                <div class="step-number">3</div>
+                <div class="step-content">
+                    <h4>Title Selection</h4>
+                    <p>User clicks on a title → React navigates to details page → Sends <code>GET /api/title/:id</code> → API fetches full metadata from MongoDB (description, cast, episodes, available renditions, subtitles) → Returns JSON with all title information</p>
+                </div>
+            </div>
+
+            <div class="flow-step">
+                <div class="step-number">4</div>
+                <div class="step-content">
+                    <h4>Play Button Click</h4>
+                    <p>User presses Play → React sends <code>POST /api/watch/:id</code> with JWT token → API validates token with Auth Service → Checks user's subscription status in MongoDB → Verifies content access rights and geo-restrictions</p>
+                </div>
+            </div>
+
+            <div class="flow-step">
+                <div class="step-number">5</div>
+                <div class="step-content">
+                    <h4>Signed URL Generation</h4>
+                    <p>API requests signed playback URL from Media Origin Server → Origin generates time-limited signed URL (TTL: 2-4 hours) with encryption token → API returns manifest URL to React player: <code>{ "manifestUrl": "https://cdn.example.com/video/abc123.m3u8?token=xyz&expires=..." }</code></p>
+                </div>
+            </div>
+
+            <div class="flow-step">
+                <div class="step-number">6</div>
+                <div class="step-content">
+                    <h4>Video Streaming Initiation</h4>
+                    <p>React video player (HLS.js/Dash.js) requests manifest from CDN → CDN checks edge cache for manifest file → If cached, serve immediately; if not, fetch from Media Origin → Origin retrieves manifest from Object Storage → CDN caches manifest and segments</p>
+                </div>
+            </div>
+
+            <div class="flow-step">
+                <div class="step-number">7</div>
+                <div class="step-content">
+                    <h4>Adaptive Streaming & Analytics</h4>
+                    <p>Player downloads video segments based on network conditions (adaptive bitrate) → Streams HLS/DASH chunks from CDN edge servers → Player sends playback events to API every 10-30 seconds: play, pause, seek, quality change, buffering → API forwards events to Analytics DB → Updates watch progress in MongoDB via background job</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Data Flow Patterns -->
+        <div class="info-section">
+            <h2>🔄 Key Data Flow Patterns</h2>
+            
+            <div class="component-grid">
+                <div class="component-card backend">
+                    <h3>🔍 Read Path (Hot Data)</h3>
+                    <ul>
+                        <li>Client → Load Balancer → API</li>
+                        <li>API checks Redis cache first</li>
+                        <li>Cache hit → Return immediately</li>
+                        <li>Cache miss → Query MongoDB</li>
+                        <li>Populate Redis with result</li>
+                        <li>Return to client</li>
+                    </ul>
+                </div>
+
+                <div class="component-card backend">
+                    <h3>✍️ Write Path</h3>
+                    <ul>
+                        <li>Client → Load Balancer → API</li>
+                        <li>API validates with Auth Service</li>
+                        <li>Write to MongoDB (primary)</li>
+                        <li>Invalidate relevant Redis cache keys</li>
+                        <li>Queue analytics event (async)</li>
+                        <li>Return success to client</li>
+                    </ul>
+                </div>
+
+                <div class="component-card backend">
+                    <h3>🎥 Video Upload & Processing</h3>
+                    <ul>
+                        <li>Admin uploads video via Dashboard</li>
+                        <li>API uploads to Object Storage</li>
+                        <li>Create transcoding job in queue</li>
+                        <li>Transcoder pulls job, processes video</li>
+                        <li>Store renditions back to Object Storage</li>
+                        <li>Update MongoDB with video metadata</li>
+                        <li>Invalidate CDN cache</li>
+                    </ul>
+                </div>
+
+                <div class="component-card backend">
+                    <h3>💰 Payment Flow</h3>
+                    <ul>
+                        <li>User subscribes via client</li>
+                        <li>API creates Stripe/PayPal session</li>
+                        <li>Payment provider processes payment</li>
+                        <li>Webhook sent to API endpoint</li>
+                        <li>API updates subscription in MongoDB</li>
+                        <li>Invalidate user session cache</li>
+                        <li>Send confirmation email/notification</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Infrastructure Notes -->
+        <div class="info-section">
+            <h2>🏗️ Infrastructure & Deployment</h2>
+            
+            <div class="component-grid">
+                <div class="component-card edge">
+                    <h3>🐳 Containerization</h3>
+                    <ul>
+                        <li>Dockerize all services (API, Auth, Transcoder)</li>
+                        <li>Use Docker Compose for local dev</li>
+                        <li>Kubernetes for production orchestration</li>
+                        <li>Helm charts for deployment config</li>
+                    </ul>
+                </div>
+
+                <div class="component-card edge">
+                    <h3>📈 Scaling Strategy</h3>
+                    <ul>
+                        <li>Horizontal scaling for API servers</li>
+                        <li>Autoscaling based on CPU/memory</li>
+                        <li>Separate transcoding worker pools</li>
+                        <li>CDN for global distribution</li>
+                        <li>Database read replicas</li>
+                    </ul>
+                </div>
+
+                <div class="component-card edge">
+                    <h3>📊 Monitoring & Logging</h3>
+                    <ul>
+                        <li>Prometheus for metrics collection</li>
+                        <li>Grafana for visualization dashboards</li>
+                        <li>ELK Stack for centralized logging</li>
+                        <li>APM tools for performance tracking</li>
+                        <li>Alerting for critical failures</li>
+                    </ul>
+                </div>
+
+                <div class="component-card edge">
+                    <h3>🔐 Security Measures</h3>
+                    <ul>
+                        <li>HTTPS/TLS everywhere</li>
+                        <li>Signed URLs with short TTLs</li>
+                        <li>DRM for premium content (Widevine)</li>
+                        <li>Rate limiting at edge and API</li>
+                        <li>Bot detection and CAPTCHA</li>
+                        <li>Regular security audits</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        mermaid.initialize({ 
+            startOnLoad: true,
+            theme: 'default',
+            flowchart: {
+                curve: 'basis',
+                padding: 20,
+                nodeSpacing: 50,
+                rankSpacing: 80
+            }
+        });
+    </script>
+</body>
+</html>

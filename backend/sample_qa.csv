@@ -1,0 +1,40 @@
+machine_name,question,expected_answer,level
+Stringer,Stringer machine ka function kya hai?,Stringer machine solar cells ko ribbon se connect karti hai soldering process ke through,1
+Stringer,Stringer machine mein kitne cells ek saath join hote hain?,Stringer machine mein 10 se 12 cells ek string mein join hote hain,1
+Stringer,Ribbon ka purpose kya hai stringer mein?,Ribbon cells ke beech electrical connection banata hai aur current flow allow karta hai,1
+Stringer,Stringer machine mein temperature kitna maintain karna chahiye?,Stringer machine mein soldering temperature 180 se 220 degree Celsius maintain karna chahiye,2
+Stringer,String inspection mein kya check karte hain?,String inspection mein ribbon alignment cell crack aur soldering quality check karte hain,2
+Stringer,Stringer machine mein flux ka use kyun hota hai?,Flux soldering process mein oxidation prevent karta hai aur better bonding ensure karta hai,2
+Stringer,Cell crack hone ke kya reasons ho sakte hain stringer mein?,Cell crack excessive pressure improper handling ya temperature fluctuation se ho sakta hai,3
+Stringer,String breakage problem ka solution kya hai?,String breakage ke liye ribbon tension adjust karein temperature check karein aur cell quality verify karein,3
+Laminator,Laminator machine ka main purpose kya hai?,Laminator machine solar module ke layers ko heat aur pressure se bond karti hai EVA ke through,1
+Laminator,Lamination process mein temperature kitna hota hai?,Lamination process mein temperature 145 se 155 degree Celsius maintain hota hai,1
+Laminator,EVA ka full form kya hai?,EVA ka full form Ethylene Vinyl Acetate hai jo encapsulant material hai,1
+Laminator,Lamination cycle time kitna hota hai?,Standard lamination cycle time 15 se 20 minutes hota hai depending on module size,2
+Laminator,Delamination problem kaise identify karein?,Delamination mein EVA layer cells se alag ho jaati hai white spots ya bubbles dikhte hain,2
+Laminator,Vacuum level laminator mein kitna maintain karna chahiye?,Vacuum level -0.9 se -1.0 bar maintain karna chahiye proper air removal ke liye,2
+Laminator,Laminator mein yellowing kyun hoti hai?,Yellowing excessive temperature ya prolonged heating se hoti hai EVA degradation ki wajah se,3
+Laminator,Pre-heating stage mein kya hota hai laminator mein?,Pre-heating stage mein module temperature gradually increase hota hai uniform heating ke liye,3
+Pre EL,Pre EL machine ka purpose kya hai?,Pre EL machine lamination se pehle cells ki electroluminescence testing karti hai defects detect karne ke liye,1
+Pre EL,EL testing mein kya check hota hai?,EL testing mein cell cracks micro cracks aur inactive areas detect hote hain,1
+Pre EL,Pre EL mein forward bias current kitna use hota hai?,Forward bias current 0.1 se 0.5 ampere per cell use hota hai EL imaging ke liye,2
+Pre EL,Dark spots EL image mein kya indicate karti hain?,Dark spots inactive areas ya cracks indicate karti hain jo power loss cause karti hain,2
+Post EL,Post EL machine kab use hoti hai?,Post EL machine lamination ke baad final quality check ke liye use hoti hai,1
+Post EL,Pre aur Post EL mein difference kya hai?,Pre EL lamination pehle aur Post EL lamination baad hoti hai dono mein defect detection purpose same hai,2
+Sun Simulator,Sun Simulator ka purpose kya hai?,Sun Simulator solar module ki power output measure karta hai artificial sunlight conditions mein,1
+Sun Simulator,STC conditions kya hoti hain?,STC Standard Test Conditions hai 1000 W/m2 irradiance 25 degree cell temperature aur AM 1.5 spectrum,1
+Sun Simulator,Flash test mein kya parameters measure hote hain?,Flash test mein Voc Isc Pmax Fill Factor aur efficiency measure hoti hai,2
+Sun Simulator,Low power output ke possible reasons kya hain?,Low power shading cell mismatch poor soldering ya degradation ki wajah se ho sakti hai,2
+Sun Simulator,Calibration sun simulator ki kab karni chahiye?,Sun simulator calibration daily ya har 100 modules test karne ke baad karni chahiye,3
+Tabber,Tabber machine ka function kya hai?,Tabber machine cells par ribbon attach karti hai interconnection ke liye,1
+Tabber,Tabbing ribbon ki width kitni hoti hai?,Tabbing ribbon ki width typically 1.2 se 2.0 mm hoti hai cell size ke according,2
+Framing,Framing process mein kya hota hai?,Framing process mein aluminum frame module ke around fit kiya jaata hai protection ke liye,1
+Framing,Frame sealant kyun use hota hai?,Frame sealant moisture ingress prevent karta hai aur frame ko glass se bond karta hai,2
+Junction Box,Junction box ka purpose kya hai?,Junction box module ki wiring contain karta hai aur external cables se connection provide karta hai,1
+Junction Box,Bypass diode ka function kya hai junction box mein?,Bypass diode shaded cells ko bypass karta hai hotspot prevent karne ke liye,2
+Hi-Pot Test,Hi-Pot test kyun karte hain?,Hi-Pot test module ki insulation integrity verify karta hai high voltage leakage check karne ke liye,1
+Hi-Pot Test,Hi-Pot test voltage kitna apply hota hai?,Hi-Pot test mein typically 3000V DC ya 1500V AC apply hota hai safety standards ke according,2
+Inspection,Visual inspection mein kya check karte hain?,Visual inspection mein cell cracks scratches contamination aur alignment defects check karte hain,1
+Inspection,IR thermography se kya detect hota hai?,IR thermography se hot spots faulty connections aur defective cells detect hote hain,2
+Glass Loading,Glass loading process mein kya precautions leni chahiye?,Glass loading mein proper handling gloves use aur edge damage avoid karne ki precautions leni chahiye,1
+Glass Loading,Glass thickness solar module mein kitni hoti hai?,Glass thickness typically 3.2mm hoti hai tempered low iron glass use hota hai,2

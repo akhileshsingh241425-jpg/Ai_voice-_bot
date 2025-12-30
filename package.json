@@ -1,0 +1,13 @@
+{
+  "name": "ai-viva-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "backend": "cd backend && python run.py",
+    "frontend": "cd frontend && npm start",
+    "start": "concurrently \"npm:backend\" \"npm:frontend\""
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
