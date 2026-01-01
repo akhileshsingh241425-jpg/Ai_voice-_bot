@@ -3,6 +3,10 @@ Production Server - Frontend + Backend on single port (9000)
 Serves React static files + Flask API together
 """
 
+# Load environment variables from .env file
+from dotenv import load_dotenv
+load_dotenv()
+
 from flask import Flask, send_from_directory, jsonify
 from flask_cors import CORS
 import os
