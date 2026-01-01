@@ -22,8 +22,8 @@ from app.routes.viva_records import viva_records_bp
 app = Flask(__name__, static_folder='../frontend_build', static_url_path='')
 CORS(app)
 
-# Register all API blueprints
-app.register_blueprint(main_bp)
+# Register all API blueprints with /api prefix to not conflict with React
+app.register_blueprint(main_bp, url_prefix='/api')
 app.register_blueprint(stt_bp, url_prefix='/stt')
 app.register_blueprint(eval_bp, url_prefix='/eval')
 app.register_blueprint(llm_bp, url_prefix='/llm')
@@ -33,9 +33,10 @@ app.register_blueprint(viva_session_bp, url_prefix='/viva')
 app.register_blueprint(chat_viva_bp, url_prefix='/chat-viva')
 app.register_blueprint(viva_records_bp, url_prefix='/viva-records')
 
-# Serve React App - catch all routes
+# Serve React App - this MUST come after blueprint registration
 @app.route('/')
 def serve_react():
+    """Serve React frontend"""
     return send_from_directory(app.static_folder, 'index.html')
 
 @app.route('/<path:path>')
