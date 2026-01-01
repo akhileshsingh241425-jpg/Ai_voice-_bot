@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Container, Row, Col, Card, Form, Button, Table, Alert, ProgressBar, Badge, Tabs, Tab } from 'react-bootstrap';
 
+// Production: empty string (relative URLs), Development: localhost:5000
+const API_BASE = process.env.NODE_ENV === 'production' ? '' : 'http://localhost:5000';
+
 interface Topic {
   id: number;
   name: string;
@@ -64,7 +67,7 @@ const TrainingQABank: React.FC = () => {
   const loadTopics = async () => {
     try {
       setLoading(true);
-      const res = await fetch('http://localhost:5000/qa/topics-stats');
+      const res = await fetch(`${API_BASE}/qa/topics-stats`);
       const data = await res.json();
       setTopics(data.topics || []);
       setTotalQuestions(data.total_questions || 0);
@@ -78,7 +81,7 @@ const TrainingQABank: React.FC = () => {
   const loadQuestions = async (topicId: number) => {
     try {
       setLoading(true);
-      const res = await fetch(`http://localhost:5000/qa/questions/${topicId}`);
+      const res = await fetch(`${API_BASE}/qa/questions/${topicId}`);
       const data = await res.json();
       setQuestions(data.questions || []);
     } catch (error) {
@@ -99,7 +102,7 @@ const TrainingQABank: React.FC = () => {
       setUploading(true);
       setUploadResult(null);
       
-      const res = await fetch('http://localhost:5000/qa/upload', {
+      const res = await fetch(`${API_BASE}/qa/upload`, {
         method: 'POST',
         body: formData
       });
@@ -122,7 +125,7 @@ const TrainingQABank: React.FC = () => {
     if (!selectedTopic || !newQ.question || !newQ.expected_answer) return;
 
     try {
-      const res = await fetch('http://localhost:5000/qa/add', {
+      const res = await fetch(`${API_BASE}/qa/add`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...newQ, topic_id: selectedTopic })
@@ -143,7 +146,7 @@ const TrainingQABank: React.FC = () => {
     if (!window.confirm('Delete this question?')) return;
     
     try {
-      await fetch(`http://localhost:5000/qa/delete/${questionId}`, { method: 'DELETE' });
+      await fetch(`${API_BASE}/qa/delete/${questionId}`, { method: 'DELETE' });
       if (selectedTopic) loadQuestions(selectedTopic);
       loadTopics();
     } catch (error) {
@@ -374,7 +377,7 @@ const TrainingQABank: React.FC = () => {
                               formData.append('topic_id', selectedTopic.toString());
                               
                               setUploading(true);
-                              fetch('http://localhost:5000/qa/upload-topic', {
+                              fetch(`${API_BASE}/qa/upload-topic`, {
                                 method: 'POST',
                                 body: formData
                               })

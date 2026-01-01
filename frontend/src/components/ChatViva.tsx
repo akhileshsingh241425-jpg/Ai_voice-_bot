@@ -2,7 +2,8 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Button, Card, Container, Row, Col, Spinner, Badge, ProgressBar } from 'react-bootstrap';
 import axios from 'axios';
 
-const API_BASE = 'http://localhost:5000';
+// Production: empty string (relative URLs), Development: localhost:5000
+const API_BASE = process.env.NODE_ENV === 'production' ? '' : 'http://localhost:5000';
 
 interface Message {
   role: 'ai' | 'user';
