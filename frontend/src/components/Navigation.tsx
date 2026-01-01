@@ -26,6 +26,12 @@ const Navigation: React.FC = () => {
                 ❓ Q&A Bank
               </Nav.Link>
             </LinkContainer>
+            
+            <LinkContainer to="/viva-records">
+              <Nav.Link>
+                📋 Viva Records
+              </Nav.Link>
+            </LinkContainer>
           </Nav>
           
           <Nav>

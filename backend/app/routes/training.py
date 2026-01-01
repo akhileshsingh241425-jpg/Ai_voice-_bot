@@ -22,6 +22,51 @@ def get_db():
 
 
 # ============================================
+# EMPLOYEE LOOKUP BY PUNCH ID
+# ============================================
+
+@training_bp.route('/employee/lookup', methods=['GET'])
+def lookup_employee_by_punch():
+    """Lookup employee by punch ID (employee_id from HRM)"""
+    punch_id = request.args.get('punch_id', '').strip()
+    
+    if not punch_id:
+        return jsonify({'success': False, 'error': 'Punch ID is required'}), 400
+    
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    # Search by employee_id (punch number)
+    cursor.execute("""
+        SELECT id, employee_id, full_name, department, designation, company_name, 
+               line_unit, reporting_head, status, user_img
+        FROM employee 
+        WHERE employee_id = %s AND status = 'Approved'
+    """, (punch_id,))
+    
+    employee = cursor.fetchone()
+    conn.close()
+    
+    if employee:
+        return jsonify({
+            'success': True,
+            'employee': {
+                'id': employee['id'],
+                'punch_id': employee['employee_id'],
+                'name': employee['full_name'],
+                'department': employee['department'],
+                'designation': employee['designation'],
+                'company': employee['company_name'],
+                'line_unit': employee['line_unit'],
+                'reporting_head': employee['reporting_head'],
+                'photo': employee['user_img']
+            }
+        })
+    else:
+        return jsonify({'success': False, 'error': 'Employee not found'}), 404
+
+
+# ============================================
 # DEPARTMENT ROUTES
 # ============================================
 
@@ -31,18 +76,26 @@ def get_departments():
     conn = get_db()
     cursor = conn.cursor()
     
+    # Get departments with topic counts
     cursor.execute("""
         SELECT d.*, 
-               COUNT(DISTINCT dtm.topic_id) as topic_count,
-               COUNT(DISTINCT e.id) as employee_count
+               COUNT(DISTINCT dtm.topic_id) as topic_count
         FROM department_new d
         LEFT JOIN department_topic_mapping dtm ON dtm.department_id = d.id
-        LEFT JOIN employee_new e ON e.department_id = d.id
         WHERE d.is_active = TRUE
         GROUP BY d.id
         ORDER BY d.name
     """)
     departments = cursor.fetchall()
+    
+    # Get total employee count from employee table (synced from HRM API)
+    cursor.execute("SELECT COUNT(*) as count FROM employee WHERE employee_id IS NOT NULL")
+    total_emp = cursor.fetchone()['count']
+    
+    # Distribute employee count proportionally or add to first department for display
+    if departments and len(departments) > 0:
+        departments[0]['employee_count'] = total_emp
+    
     conn.close()
     
     return jsonify({'departments': departments})

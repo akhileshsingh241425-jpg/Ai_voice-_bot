@@ -2,6 +2,11 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Container, Row, Col, Button, Card, Badge, ProgressBar, Form, Alert } from 'react-bootstrap';
 import { VivaAPIService, handleAPIError } from '../services/apiService';
 
+// API Base URL - empty in production (same server), localhost in development
+const API_BASE_URL = process.env.REACT_APP_API_URL || (
+  process.env.NODE_ENV === 'production' ? '' : 'http://localhost:5000'
+);
+
 interface VivaQuestion {
   question: string;
   expected_answer: string;
@@ -32,7 +37,10 @@ const KBCViva: React.FC = () => {
   const [selectedTopic, setSelectedTopic] = useState<number | null>(null);  // NEW
   const [selectedMachineName, setSelectedMachineName] = useState<string>('');
   const [selectedTopicName, setSelectedTopicName] = useState<string>('');  // NEW
-  const [userName, setUserName] = useState('');
+  const [punchId, setPunchId] = useState('');
+  const [employee, setEmployee] = useState<any>(null);
+  const [lookupError, setLookupError] = useState('');
+  const [isLookingUp, setIsLookingUp] = useState(false);
   const [language, setLanguage] = useState<'Hindi' | 'English'>('Hindi');
   const [numQuestions, setNumQuestions] = useState(10);
   
@@ -64,6 +72,15 @@ const KBCViva: React.FC = () => {
   const mediaRecorder = useRef<MediaRecorder | null>(null);
   const audioChunks = useRef<Blob[]>([]);
 
+  // Video recording state
+  const [isVideoEnabled, setIsVideoEnabled] = useState(true);
+  const [isVideoRecording, setIsVideoRecording] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const videoStreamRef = useRef<MediaStream | null>(null);
+  const videoRecorderRef = useRef<MediaRecorder | null>(null);
+  const videoChunksRef = useRef<Blob[]>([]);
+  const vivaStartTime = useRef<Date | null>(null);
+
   // Error state
   const [error, setError] = useState<string | null>(null);
 
@@ -76,22 +93,206 @@ const KBCViva: React.FC = () => {
   const loadMachines = async () => {
     try {
       const data = await VivaAPIService.getMachines();
-      setMachines(data.machines);
+      setMachines(data.machines || []);
     } catch (err) {
-      setError(handleAPIError(err));
+      // Silently fail - machines are optional, topics are primary now
+      console.log('Machines API not available (optional)');
+      setMachines([]);
     }
   };
 
   // NEW: Load training topics
   const loadTopics = async () => {
     try {
-      const response = await fetch('http://localhost:5000/qa/topics-stats');
+      const response = await fetch(`${API_BASE_URL}/qa/topics-stats`);
       const data = await response.json();
+      console.log('Topics API Response:', data);
       // Only show topics with 5+ questions
       const topicsWithQuestions = (data.topics || []).filter((t: any) => (t.total_questions || 0) >= 5);
+      console.log('Topics with 5+ questions:', topicsWithQuestions);
       setTopics(topicsWithQuestions);
     } catch (err) {
       console.error('Error loading topics:', err);
+    }
+  };
+
+  // Lookup employee by Punch ID
+  const lookupEmployee = async () => {
+    if (!punchId.trim()) {
+      setLookupError('Punch ID डालें');
+      return;
+    }
+    
+    setIsLookingUp(true);
+    setLookupError('');
+    setEmployee(null);
+    
+    try {
+      const response = await fetch(`${API_BASE_URL}/training/employee/lookup?punch_id=${punchId.trim()}`);
+      const data = await response.json();
+      
+      if (data.success) {
+        setEmployee(data.employee);
+        setLookupError('');
+      } else {
+        setLookupError(data.error || 'Employee not found');
+      }
+    } catch (err: any) {
+      setLookupError('❌ Invalid Punch ID - Employee not found');
+      console.error('Lookup error:', err);
+    } finally {
+      setIsLookingUp(false);
+    }
+  };
+
+  // ========== VIDEO RECORDING FUNCTIONS ==========
+  
+  // Start camera preview
+  const startCamera = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: { width: 640, height: 480, facingMode: 'user' },
+        audio: false 
+      });
+      videoStreamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+      }
+      return true;
+    } catch (err) {
+      console.error('Camera error:', err);
+      setIsVideoEnabled(false);
+      return false;
+    }
+  };
+
+  // Start video recording
+  const startVideoRecording = async () => {
+    if (!isVideoEnabled) return;
+    
+    try {
+      // Get camera + audio stream - LOW RESOLUTION for compression
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: { 
+          width: { ideal: 320 },   // Low resolution for smaller file
+          height: { ideal: 240 },
+          frameRate: { ideal: 15 }, // Lower framerate
+          facingMode: 'user' 
+        },
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          sampleRate: 22050  // Lower audio quality
+        }
+      });
+      
+      videoStreamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+      }
+      
+      videoChunksRef.current = [];
+      
+      // Use lower bitrate for compression
+      const options: MediaRecorderOptions = {
+        mimeType: 'video/webm;codecs=vp8,opus',
+        videoBitsPerSecond: 200000,  // 200 kbps video (very compressed)
+        audioBitsPerSecond: 32000    // 32 kbps audio
+      };
+      
+      const recorder = new MediaRecorder(stream, options);
+      
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) {
+          videoChunksRef.current.push(e.data);
+        }
+      };
+      
+      videoRecorderRef.current = recorder;
+      recorder.start(1000); // Chunk every 1 second
+      setIsVideoRecording(true);
+      vivaStartTime.current = new Date();
+      
+      console.log('📹 Video recording started (compressed mode)');
+    } catch (err) {
+      console.error('Video recording error:', err);
+      setIsVideoEnabled(false);
+    }
+  };
+
+  // Stop video recording and get blob
+  const stopVideoRecording = (): Promise<Blob | null> => {
+    return new Promise((resolve) => {
+      if (!videoRecorderRef.current || !isVideoRecording) {
+        resolve(null);
+        return;
+      }
+      
+      videoRecorderRef.current.onstop = () => {
+        const videoBlob = new Blob(videoChunksRef.current, { type: 'video/webm' });
+        console.log('📹 Video recording stopped, size:', videoBlob.size);
+        resolve(videoBlob);
+      };
+      
+      videoRecorderRef.current.stop();
+      setIsVideoRecording(false);
+      
+      // Stop all tracks
+      if (videoStreamRef.current) {
+        videoStreamRef.current.getTracks().forEach(track => track.stop());
+      }
+    });
+  };
+
+  // Save viva record with video
+  const saveVivaRecord = async (videoBlob: Blob | null, summaryData: any) => {
+    try {
+      const formData = new FormData();
+      
+      // Employee info
+      formData.append('employee_id', employee?.punch_id || '');
+      formData.append('employee_name', employee?.name || '');
+      formData.append('department', employee?.department || '');
+      formData.append('designation', employee?.designation || '');
+      
+      // Topic info
+      formData.append('topic_id', String(selectedTopic || 0));
+      formData.append('topic_name', selectedTopicName || selectedMachineName || '');
+      
+      // Results
+      formData.append('total_questions', String(summaryData.total));
+      formData.append('correct_answers', String(summaryData.correct));
+      formData.append('partial_answers', String(summaryData.partial));
+      formData.append('wrong_answers', String(summaryData.wrong));
+      formData.append('score_percent', String(summaryData.percent));
+      formData.append('language', language);
+      
+      // Duration
+      const duration = vivaStartTime.current 
+        ? Math.floor((new Date().getTime() - vivaStartTime.current.getTime()) / 1000)
+        : 0;
+      formData.append('duration_seconds', String(duration));
+      formData.append('started_at', vivaStartTime.current?.toISOString() || '');
+      
+      // Answers JSON
+      formData.append('answers_json', JSON.stringify(answers));
+      
+      // Video file
+      if (videoBlob && videoBlob.size > 0) {
+        formData.append('video', videoBlob, 'viva_recording.webm');
+      }
+      
+      const response = await fetch(`${API_BASE_URL}/viva-records/save`, {
+        method: 'POST',
+        body: formData
+      });
+      
+      const result = await response.json();
+      console.log('✅ Viva record saved:', result);
+      return result;
+    } catch (err) {
+      console.error('Error saving viva record:', err);
+      return null;
     }
   };
 
@@ -134,7 +335,7 @@ const KBCViva: React.FC = () => {
       // NEW: If topic selected, fetch from training Q&A bank
       if (sourceType === 'topic' && selectedTopic) {
         const lang = language === 'Hindi' ? 'HI' : 'EN';
-        const response = await fetch(`http://localhost:5000/qa/viva-questions/${selectedTopic}?count=${numQuestions}&language=${lang}`);
+        const response = await fetch(`${API_BASE_URL}/qa/viva-questions/${selectedTopic}?count=${numQuestions}&language=${lang}`);
         const data = await response.json();
         
         if (data.questions && data.questions.length > 0) {
@@ -166,8 +367,8 @@ const KBCViva: React.FC = () => {
 
   // Start viva immediately with welcome
   const startViva = async () => {
-    if (!userName.trim()) {
-      setError('कृपया अपना नाम दर्ज करें');
+    if (!employee) {
+      setError('कृपया अपना Punch ID verify करें');
       return;
     }
     
@@ -184,11 +385,16 @@ const KBCViva: React.FC = () => {
     setError(null);
     setVivaState('welcome');
     
+    // Start video recording
+    if (isVideoEnabled) {
+      await startVideoRecording();
+    }
+    
     // Welcome message
     const sourceName = sourceType === 'topic' ? selectedTopicName : selectedMachineName;
     const welcomeMsg = language === 'Hindi' 
-      ? `स्वागत है ${userName}! मैं आपका host हूँ। आज हम ${sourceName} के बारे में कुछ सवाल पूछेंगे। क्या आप तैयार हैं?`
-      : `Welcome ${userName}! I'm your host. Today we'll discuss about ${sourceName}. Are you ready?`;
+      ? `स्वागत है ${employee.name}! मैं आपका host हूँ। आज हम ${sourceName} के बारे में कुछ सवाल पूछेंगे। क्या आप तैयार हैं?`
+      : `Welcome ${employee.name}! I'm your host. Today we'll discuss about ${sourceName}. Are you ready?`;
     
     speakText(welcomeMsg, 'happy');
     
@@ -451,20 +657,30 @@ const KBCViva: React.FC = () => {
     }
   };
 
-  const showSummary = () => {
+  const showSummary = async () => {
     setVivaState('summary');
     
     const correct = answers.filter(a => a.is_correct).length;
+    const partial = answers.filter(a => a.is_partial && !a.is_correct).length;
+    const wrong = answers.filter(a => !a.is_correct && !a.is_partial).length;
     const total = answers.length;
     const percent = Math.round((correct / total) * 100);
     
+    // Stop video recording and save
+    const videoBlob = await stopVideoRecording();
+    
+    // Save viva record to database
+    const summaryData = { total, correct, partial, wrong, percent };
+    await saveVivaRecord(videoBlob, summaryData);
+    
     let summaryMsg = '';
+    const empName = employee?.name || 'Candidate';
     if (percent >= 80) {
-      summaryMsg = `शानदार ${userName}! आपने ${total} में से ${correct} सवालों का सही जवाब दिया। Excellent!`;
+      summaryMsg = `शानदार ${empName}! आपने ${total} में से ${correct} सवालों का सही जवाब दिया। Excellent!`;
     } else if (percent >= 50) {
-      summaryMsg = `अच्छा ${userName}! आपने ${total} में से ${correct} सही किए। थोड़ी और practice करें!`;
+      summaryMsg = `अच्छा ${empName}! आपने ${total} में से ${correct} सही किए। थोड़ी और practice करें!`;
     } else {
-      summaryMsg = `${userName}, आपने ${total} में से ${correct} सही किए। Study material फिर से पढ़ें।`;
+      summaryMsg = `${empName}, आपने ${total} में से ${correct} सही किए। Study material फिर से पढ़ें।`;
     }
     
     speakText(summaryMsg, 'happy');
@@ -563,17 +779,89 @@ const KBCViva: React.FC = () => {
               
               {error && <Alert variant="danger">{error}</Alert>}
               
+              {/* Punch ID Input */}
               <Form.Group className="mb-4">
-                <Form.Label>👤 आपका नाम</Form.Label>
-                <Form.Control
-                  type="text"
-                  placeholder="अपना नाम लिखें..."
-                  value={userName}
-                  onChange={(e) => setUserName(e.target.value)}
-                  className="form-control-lg"
-                  style={{ borderRadius: '10px' }}
-                />
+                <Form.Label>🔢 Punch ID डालें</Form.Label>
+                <div className="input-group">
+                  <Form.Control
+                    type="text"
+                    placeholder="अपना Punch ID डालें..."
+                    value={punchId}
+                    onChange={(e) => {
+                      setPunchId(e.target.value);
+                      setEmployee(null);
+                      setLookupError('');
+                    }}
+                    onKeyPress={(e: any) => e.key === 'Enter' && lookupEmployee()}
+                    className="form-control-lg"
+                    style={{ borderRadius: '10px 0 0 10px' }}
+                  />
+                  <button 
+                    className="btn btn-primary" 
+                    type="button"
+                    onClick={lookupEmployee}
+                    disabled={isLookingUp}
+                    style={{ borderRadius: '0 10px 10px 0' }}
+                  >
+                    {isLookingUp ? '...' : 'Verify'}
+                  </button>
+                </div>
+                {lookupError && (
+                  <div className="text-danger mt-2 small">{lookupError}</div>
+                )}
               </Form.Group>
+
+              {/* Employee Details Card with Photo */}
+              {employee && (
+                <div className="mb-4 p-3 rounded" style={{ background: 'rgba(76, 175, 80, 0.15)', border: '2px solid #4caf50' }}>
+                  <div className="d-flex align-items-center">
+                    {/* Employee Photo */}
+                    <div style={{ 
+                      width: '80px', 
+                      height: '80px', 
+                      borderRadius: '50%', 
+                      background: '#4caf50',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: 'white',
+                      fontSize: '28px',
+                      marginRight: '15px',
+                      overflow: 'hidden',
+                      border: '3px solid #4caf50',
+                      boxShadow: '0 4px 15px rgba(76, 175, 80, 0.4)'
+                    }}>
+                      {employee.photo ? (
+                        <img 
+                          src={`https://hrm.umanerp.com/${employee.photo}`} 
+                          alt={employee.name}
+                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                          onError={(e: any) => {
+                            e.target.style.display = 'none';
+                            e.target.parentElement.innerHTML = employee.name?.charAt(0)?.toUpperCase() || '?';
+                          }}
+                        />
+                      ) : (
+                        employee.name?.charAt(0)?.toUpperCase() || '?'
+                      )}
+                    </div>
+                    <div className="flex-grow-1">
+                      <div className="d-flex align-items-center mb-1">
+                        <Badge bg="success" className="me-2">✓ Verified</Badge>
+                        <small className="text-muted">ID: {employee.punch_id}</small>
+                      </div>
+                      <div className="fw-bold" style={{ fontSize: '20px', color: '#fff' }}>{employee.name}</div>
+                      <div style={{ color: '#aaa', fontSize: '14px' }}>
+                        <span className="me-2">👔 {employee.designation}</span>
+                      </div>
+                      <div style={{ color: '#888', fontSize: '13px' }}>
+                        <span className="me-2">🏢 {employee.department}</span>
+                        {employee.company && <span>| {employee.company}</span>}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
               
               {/* NEW: Source Type Toggle */}
               <Form.Group className="mb-4">
@@ -603,10 +891,16 @@ const KBCViva: React.FC = () => {
                   <Form.Select
                     value={selectedTopic || ''}
                     onChange={(e) => {
-                      const id = parseInt(e.target.value);
-                      setSelectedTopic(id);
-                      const topic = topics.find(t => t.id === id);
-                      setSelectedTopicName(topic?.name || '');
+                      const val = e.target.value;
+                      if (val === '') {
+                        setSelectedTopic(null);
+                        setSelectedTopicName('');
+                      } else {
+                        const id = parseInt(val);
+                        setSelectedTopic(id);
+                        const topic = topics.find(t => t.id === id);
+                        setSelectedTopicName(topic?.name || '');
+                      }
                     }}
                     className="form-select-lg"
                     style={{ borderRadius: '10px' }}
@@ -671,7 +965,10 @@ const KBCViva: React.FC = () => {
                 size="lg" 
                 className="w-100 py-3"
                 onClick={startViva}
-                disabled={(sourceType === 'topic' ? !selectedTopic : !selectedMachine) || !userName.trim()}
+                disabled={
+                  (sourceType === 'topic' ? (!selectedTopic || selectedTopic <= 0) : (!selectedMachine || selectedMachine <= 0)) 
+                  || !employee
+                }
                 style={{ 
                   borderRadius: '15px',
                   fontWeight: 'bold',
@@ -717,7 +1014,7 @@ const KBCViva: React.FC = () => {
     </Container>
   );
 
-  // Render Playing Screen (Main Viva)
+  // Render Playing Screen (Main Viva) - CARTOON STYLE
   const renderPlaying = () => {
     const currentQ = questions[currentIndex];
     const progress = ((currentIndex + 1) / numQuestions) * 100;
@@ -725,7 +1022,7 @@ const KBCViva: React.FC = () => {
     if (!currentQ) {
       return (
         <Container fluid className="vh-100 d-flex align-items-center justify-content-center" style={{
-          background: 'linear-gradient(135deg, #0f0f23 0%, #1a1a3e 50%, #0d0d1a 100%)',
+          background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)',
         }}>
           <div className="text-center text-white">
             <div className="spinner-border text-info mb-3" role="status" />
@@ -735,140 +1032,347 @@ const KBCViva: React.FC = () => {
       );
     }
     
+    // DiceBear Cartoon Avatars - Working URLs
+    const hostAvatarUrl = "https://api.dicebear.com/7.x/lorelei/svg?seed=trainer&backgroundColor=b6e3f4&flip=false";
+    const userAvatarUrl = employee?.photo 
+      ? `https://hrm.umanerp.com/${employee.photo}`
+      : `https://api.dicebear.com/7.x/lorelei/svg?seed=${encodeURIComponent(employee?.name || 'student')}&backgroundColor=c0aede`;
+    
     return (
-      <Container fluid className="min-vh-100 p-0" style={{
-        background: 'linear-gradient(135deg, #0f0f23 0%, #1a1a3e 50%, #0d0d1a 100%)',
+      <div style={{
+        minHeight: '100vh',
+        background: 'linear-gradient(180deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)',
+        position: 'relative',
+        overflow: 'hidden'
       }}>
-        {/* Progress Bar */}
-        <ProgressBar 
-          now={progress} 
-          variant="info" 
-          style={{ height: '8px', borderRadius: 0 }}
-        />
-        
-        {/* Question Counter */}
-        <div className="text-center py-2">
-          <Badge bg="dark" className="px-4 py-2" style={{ fontSize: '1rem' }}>
-            Question {currentIndex + 1} / {numQuestions}
-          </Badge>
-          {isGenerating && (
-            <Badge bg="warning" className="ms-2 px-3 py-2">
-              <span className="spinner-border spinner-border-sm me-1" />
-              Generating...
+        {/* Animated Background */}
+        <div style={{
+          position: 'absolute',
+          top: 0, left: 0, right: 0, bottom: 0,
+          backgroundImage: 'radial-gradient(2px 2px at 20px 30px, rgba(255,255,255,0.3), transparent), radial-gradient(2px 2px at 40px 70px, rgba(255,255,255,0.2), transparent)',
+          backgroundSize: '200px 200px',
+          animation: 'twinkle 5s infinite',
+          pointerEvents: 'none'
+        }} />
+
+        {/* Video Recording - Corner */}
+        {isVideoEnabled && isVideoRecording && (
+          <div style={{
+            position: 'fixed', top: '15px', right: '15px', zIndex: 1000,
+            borderRadius: '12px', overflow: 'hidden',
+            boxShadow: '0 4px 20px rgba(255,0,0,0.5)', border: '3px solid #ff4757'
+          }}>
+            <video ref={videoRef} autoPlay muted playsInline style={{ width: '100px', height: '75px', objectFit: 'cover' }} />
+            <div style={{
+              position: 'absolute', top: '5px', left: '5px', background: '#ff4757', color: 'white',
+              padding: '2px 6px', borderRadius: '8px', fontSize: '9px', fontWeight: 'bold',
+              display: 'flex', alignItems: 'center', gap: '3px'
+            }}>
+              <span style={{ width: '5px', height: '5px', background: 'white', borderRadius: '50%', animation: 'pulse 1s infinite' }}></span>
+              REC
+            </div>
+          </div>
+        )}
+
+        {/* Header Bar */}
+        <div style={{ 
+          padding: '15px 25px', 
+          background: 'rgba(0,0,0,0.4)',
+          backdropFilter: 'blur(10px)',
+          borderBottom: '1px solid rgba(255,255,255,0.1)'
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+            <Badge bg="primary" style={{ fontSize: '13px', padding: '10px 18px', borderRadius: '20px' }}>
+              🎯 Question {currentIndex + 1} / {numQuestions}
             </Badge>
-          )}
+            <div style={{ color: '#fff', fontSize: '14px', fontWeight: '500' }}>
+              {employee?.name}
+            </div>
+            <Badge bg={currentQ.level === 1 ? 'success' : currentQ.level === 2 ? 'warning' : 'danger'} 
+              style={{ fontSize: '13px', padding: '10px 18px', borderRadius: '20px' }}>
+              {currentQ.level === 1 ? '🟢 Easy' : currentQ.level === 2 ? '🟡 Medium' : '🔴 Hard'}
+            </Badge>
+          </div>
+          <ProgressBar now={progress} variant="info" style={{ height: '8px', borderRadius: '4px', background: 'rgba(255,255,255,0.1)' }} />
         </div>
-        
-        {/* Avatar */}
-        <div className="pt-3">
-          {renderAvatar()}
-        </div>
-        
-        {/* Question Card */}
-        <Container>
-          <Row className="justify-content-center">
-            <Col md={10} lg={8}>
-              <Card className="shadow-lg border-0 mb-4" style={{
-                background: 'linear-gradient(135deg, #2d3748, #1a202c)',
-                borderRadius: '20px',
-                border: '2px solid #4a5568',
-              }}>
-                <Card.Body className="p-4 text-white">
-                  {/* Level Badge */}
-                  <div className="text-center mb-3">
-                    <Badge 
-                      bg={currentQ.level === 1 ? 'success' : currentQ.level === 2 ? 'warning' : 'danger'}
-                      className="px-4 py-2"
-                      style={{ fontSize: '0.9rem' }}
-                    >
-                      {currentQ.level === 1 ? '🟢 Easy' : currentQ.level === 2 ? '🟡 Medium' : '🔴 Hard'}
-                    </Badge>
+
+        {/* Main Chat Area */}
+        <Container className="py-4" style={{ position: 'relative', zIndex: 10, maxWidth: '900px' }}>
+          
+          {/* ========== HOST (TRAINER) - LEFT SIDE ========== */}
+          <Row className="mb-4">
+            <Col xs={12}>
+              <div className="d-flex align-items-end">
+                {/* Host Cartoon Avatar */}
+                <div style={{
+                  width: '100px',
+                  height: '100px',
+                  borderRadius: '50%',
+                  overflow: 'hidden',
+                  boxShadow: '0 8px 30px rgba(102, 126, 234, 0.6)',
+                  border: '4px solid #fff',
+                  background: '#b6e3f4',
+                  flexShrink: 0,
+                  animation: avatarMood === 'thinking' ? 'bounce 1s infinite' : 'none'
+                }}>
+                  <img 
+                    src={hostAvatarUrl}
+                    alt="Trainer"
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    onError={(e: any) => { e.target.src = 'https://api.dicebear.com/7.x/bottts/svg?seed=host'; }}
+                  />
+                </div>
+                
+                {/* Host Speech Bubble */}
+                <div style={{
+                  marginLeft: '15px',
+                  background: '#fff',
+                  borderRadius: '20px 20px 20px 5px',
+                  padding: '18px 22px',
+                  maxWidth: 'calc(100% - 120px)',
+                  position: 'relative',
+                  boxShadow: '0 8px 25px rgba(0,0,0,0.15)',
+                  animation: 'slideIn 0.4s ease-out'
+                }}>
+                  {/* Triangle pointer */}
+                  <div style={{
+                    position: 'absolute', left: '-12px', bottom: '20px',
+                    width: 0, height: 0,
+                    borderTop: '12px solid transparent',
+                    borderBottom: '12px solid transparent',
+                    borderRight: '12px solid #fff'
+                  }} />
+                  <div style={{ 
+                    color: '#667eea', 
+                    fontSize: '11px', 
+                    fontWeight: '700', 
+                    marginBottom: '8px',
+                    textTransform: 'uppercase',
+                    letterSpacing: '1px'
+                  }}>
+                    🎓 Trainer
+                  </div>
+                  <div style={{ 
+                    color: '#2d3748', 
+                    fontSize: '17px', 
+                    fontWeight: '500', 
+                    lineHeight: 1.6 
+                  }}>
+                    {currentQ.question}
+                  </div>
+                </div>
+              </div>
+            </Col>
+          </Row>
+
+          {/* ========== USER (STUDENT) - RIGHT SIDE ========== */}
+          {(currentAnswer || isListening || isProcessing) && (
+            <Row className="mb-4">
+              <Col xs={12}>
+                <div className="d-flex align-items-end justify-content-end">
+                  {/* User Speech Bubble */}
+                  <div style={{
+                    marginRight: '15px',
+                    background: isListening 
+                      ? 'linear-gradient(135deg, #ff6b6b, #ee5a24)' 
+                      : 'linear-gradient(135deg, #00b894, #00cec9)',
+                    borderRadius: '20px 20px 5px 20px',
+                    padding: '18px 22px',
+                    maxWidth: 'calc(100% - 120px)',
+                    position: 'relative',
+                    boxShadow: '0 8px 25px rgba(0,0,0,0.2)',
+                    animation: isListening ? 'pulse 1s infinite' : 'slideInRight 0.4s ease-out'
+                  }}>
+                    {/* Triangle pointer */}
+                    <div style={{
+                      position: 'absolute', right: '-12px', bottom: '20px',
+                      width: 0, height: 0,
+                      borderTop: '12px solid transparent',
+                      borderBottom: '12px solid transparent',
+                      borderLeft: isListening ? '12px solid #ff6b6b' : '12px solid #00b894'
+                    }} />
+                    <div style={{ 
+                      color: 'rgba(255,255,255,0.9)', 
+                      fontSize: '11px', 
+                      fontWeight: '700', 
+                      marginBottom: '8px',
+                      textTransform: 'uppercase',
+                      letterSpacing: '1px'
+                    }}>
+                      👤 {employee?.name || 'You'}
+                    </div>
+                    <div style={{ color: '#fff', fontSize: '16px', lineHeight: 1.5 }}>
+                      {isListening ? (
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span className="recording-wave">🎤</span> बोल रहा हूँ...
+                        </span>
+                      ) : isProcessing ? (
+                        <span>⏳ Processing...</span>
+                      ) : currentAnswer}
+                    </div>
                   </div>
                   
-                  {/* Question */}
-                  <h4 className="text-center mb-4" style={{ lineHeight: 1.6 }}>
-                    {currentQ.question}
-                  </h4>
+                  {/* User Cartoon Avatar with Photo */}
+                  <div style={{
+                    width: '100px',
+                    height: '100px',
+                    borderRadius: '50%',
+                    overflow: 'hidden',
+                    boxShadow: isListening 
+                      ? '0 0 0 4px rgba(255,107,107,0.5), 0 8px 30px rgba(255,107,107,0.4)' 
+                      : '0 8px 30px rgba(0, 184, 148, 0.5)',
+                    border: '4px solid #fff',
+                    background: '#c0aede',
+                    flexShrink: 0,
+                    animation: isListening ? 'pulse 1s infinite' : 'none'
+                  }}>
+                    <img 
+                      src={userAvatarUrl}
+                      alt={employee?.name || 'User'}
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                      onError={(e: any) => {
+                        e.target.src = `https://api.dicebear.com/7.x/lorelei/svg?seed=student&backgroundColor=c0aede`;
+                      }}
+                    />
+                  </div>
+                </div>
+              </Col>
+            </Row>
+          )}
+
+          {/* Feedback Section */}
+          {feedback && (
+            <Row className="mb-4">
+              <Col xs={12}>
+                <div className="d-flex align-items-start">
+                  {/* Feedback Avatar */}
+                  <div style={{
+                    width: '70px',
+                    height: '70px',
+                    borderRadius: '50%',
+                    background: feedbackType === 'success' ? 'linear-gradient(135deg, #00b894, #55efc4)' 
+                      : feedbackType === 'warning' ? 'linear-gradient(135deg, #fdcb6e, #e17055)'
+                      : 'linear-gradient(135deg, #d63031, #e17055)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '35px',
+                    boxShadow: '0 8px 25px rgba(0,0,0,0.3)',
+                    border: '3px solid #fff',
+                    flexShrink: 0
+                  }}>
+                    {feedbackType === 'success' ? '✅' : feedbackType === 'warning' ? '⚠️' : '❌'}
+                  </div>
                   
-                  {/* User's Answer */}
-                  {currentAnswer && (
-                    <div className="p-3 mb-3" style={{
-                      background: 'rgba(255,255,255,0.1)',
-                      borderRadius: '10px',
-                    }}>
-                      <small className="text-muted">आपका जवाब:</small>
-                      <p className="mb-0">{currentAnswer}</p>
-                    </div>
-                  )}
-                  
-                  {/* Feedback */}
-                  {feedback && (
-                    <Alert variant={feedbackType === 'success' ? 'success' : feedbackType === 'warning' ? 'warning' : 'danger'}>
+                  {/* Feedback Bubble */}
+                  <div style={{
+                    marginLeft: '15px',
+                    background: feedbackType === 'success' ? 'linear-gradient(135deg, #00b894, #55efc4)' 
+                      : feedbackType === 'warning' ? 'linear-gradient(135deg, #fdcb6e, #e17055)'
+                      : 'linear-gradient(135deg, #d63031, #e17055)',
+                    borderRadius: '20px 20px 20px 5px',
+                    padding: '15px 20px',
+                    maxWidth: '70%',
+                    boxShadow: '0 8px 25px rgba(0,0,0,0.2)'
+                  }}>
+                    <div style={{ color: '#fff', fontSize: '16px', fontWeight: '500' }}>
                       {feedback}
-                    </Alert>
-                  )}
-                  
-                  {/* Correct Answer */}
-                  {showCorrectAnswer && (
-                    <Alert variant="info">
-                      <strong>✅ सही जवाब:</strong> {showCorrectAnswer}
-                    </Alert>
-                  )}
-                  
-                  {/* Wait Timer with Skip */}
-                  {isWaiting && (
-                    <div className="text-center p-3" style={{
-                      background: 'rgba(0,0,0,0.3)',
-                      borderRadius: '10px',
-                    }}>
-                      <div style={{
-                        fontSize: '2rem',
-                        fontWeight: 'bold',
-                        color: waitSeconds > 15 ? '#fc8181' : waitSeconds > 5 ? '#f6e05e' : '#68d391',
-                      }}>
-                        {waitSeconds}s
-                      </div>
-                      <Button variant="outline-light" onClick={skipWait} className="mt-2">
-                        ⏭️ Skip - Next Question
-                      </Button>
                     </div>
-                  )}
-                </Card.Body>
-              </Card>
-              
-              {/* Controls - Hide when waiting */}
-              {!isWaiting && (
-                <Card className="shadow border-0" style={{
-                  background: 'rgba(255,255,255,0.95)',
+                  </div>
+                </div>
+              </Col>
+            </Row>
+          )}
+
+          {/* Correct Answer Display */}
+          {showCorrectAnswer && (
+            <Row className="mb-4">
+              <Col xs={12}>
+                <div style={{
+                  background: 'linear-gradient(135deg, #0984e3, #6c5ce7)',
+                  borderRadius: '15px',
+                  padding: '15px 20px',
+                  boxShadow: '0 8px 25px rgba(0,0,0,0.2)'
+                }}>
+                  <div style={{ color: '#fff', fontSize: '14px', marginBottom: '5px' }}>✅ सही जवाब:</div>
+                  <div style={{ color: '#fff', fontSize: '16px' }}>{showCorrectAnswer}</div>
+                </div>
+              </Col>
+            </Row>
+          )}
+
+          {/* Wait Timer */}
+          {isWaiting && (
+            <Row className="mb-4">
+              <Col xs={12} className="text-center">
+                <div style={{
+                  display: 'inline-block',
+                  background: 'rgba(0,0,0,0.5)',
                   borderRadius: '20px',
+                  padding: '20px 40px'
+                }}>
+                  <div style={{
+                    fontSize: '48px',
+                    fontWeight: 'bold',
+                    color: waitSeconds > 15 ? '#ff6b6b' : waitSeconds > 5 ? '#feca57' : '#1dd1a1',
+                    textShadow: '0 0 20px currentColor'
+                  }}>
+                    {waitSeconds}s
+                  </div>
+                  <Button variant="outline-light" onClick={skipWait} className="mt-2">
+                    ⏭️ Next Question
+                  </Button>
+                </div>
+              </Col>
+            </Row>
+          )}
+
+          {/* Controls - Voice & Text Input */}
+          {!isWaiting && (
+            <Row className="mt-4">
+              <Col md={8} lg={6} className="mx-auto">
+                <Card style={{
+                  background: 'rgba(255,255,255,0.95)',
+                  borderRadius: '25px',
+                  border: 'none',
+                  boxShadow: '0 20px 60px rgba(0,0,0,0.3)'
                 }}>
                   <Card.Body className="p-4">
                     {/* Voice Button */}
-                    <div className="text-center mb-3">
-                      <Button
-                        variant={isListening ? 'danger' : 'primary'}
-                        className="rounded-circle p-0"
+                    <div className="text-center mb-4">
+                      <button
                         onClick={isListening ? stopListening : startListening}
                         disabled={isProcessing}
-                        style={{ 
-                          width: '80px', 
-                          height: '80px',
-                          fontSize: '2rem',
+                        style={{
+                          width: '100px',
+                          height: '100px',
+                          borderRadius: '50%',
+                          border: 'none',
+                          background: isListening 
+                            ? 'linear-gradient(135deg, #ff6b6b, #ee5a24)' 
+                            : 'linear-gradient(135deg, #667eea, #764ba2)',
+                          color: 'white',
+                          fontSize: '40px',
+                          cursor: 'pointer',
+                          boxShadow: isListening 
+                            ? '0 0 0 10px rgba(255,107,107,0.3), 0 10px 40px rgba(255,107,107,0.5)'
+                            : '0 10px 40px rgba(102,126,234,0.4)',
+                          animation: isListening ? 'pulse 1s infinite' : 'none',
+                          transition: 'all 0.3s ease'
                         }}
                       >
                         {isListening ? '⏹️' : isProcessing ? '⏳' : '🎤'}
-                      </Button>
-                      <p className="mt-2 text-muted">
-                        {isListening ? '🔴 Recording... Click to stop' : 
-                         isProcessing ? 'Processing...' : 'Click to speak'}
+                      </button>
+                      <p className="mt-3 mb-0" style={{ color: '#666', fontWeight: '500' }}>
+                        {isListening ? '🔴 Recording... Click to stop' : isProcessing ? '⏳ Processing...' : '🎤 Click to speak'}
                       </p>
                     </div>
-                    
-                    {/* OR Text Input */}
-                    <div className="text-center mb-2">
-                      <small className="text-muted">— या टाइप करें —</small>
+
+                    <div className="text-center mb-3">
+                      <span style={{ color: '#999' }}>— या टाइप करें —</span>
                     </div>
-                    
+
+                    {/* Text Input */}
                     <Form.Control
                       as="textarea"
                       rows={2}
@@ -876,36 +1380,59 @@ const KBCViva: React.FC = () => {
                       value={currentAnswer}
                       onChange={(e) => setCurrentAnswer(e.target.value)}
                       disabled={isListening || isProcessing}
-                      style={{ borderRadius: '10px' }}
+                      style={{ 
+                        borderRadius: '15px', 
+                        border: '2px solid #eee',
+                        padding: '15px'
+                      }}
                     />
-                    
-                    <Button 
-                      variant="success" 
-                      className="w-100 mt-3"
+
+                    <Button
                       onClick={submitTextAnswer}
                       disabled={!currentAnswer.trim() || isListening || isProcessing}
-                      style={{ borderRadius: '10px' }}
+                      className="w-100 mt-3"
+                      style={{
+                        background: 'linear-gradient(135deg, #00b894, #00cec9)',
+                        border: 'none',
+                        borderRadius: '15px',
+                        padding: '15px',
+                        fontSize: '16px',
+                        fontWeight: '600'
+                      }}
                     >
                       जवाब Submit करें →
                     </Button>
                   </Card.Body>
                 </Card>
-              )}
-            </Col>
-          </Row>
+              </Col>
+            </Row>
+          )}
         </Container>
-        
+
+        {/* Animations */}
         <style>{`
           @keyframes pulse {
-            0%, 100% { transform: scale(1); opacity: 1; }
-            50% { transform: scale(1.05); opacity: 0.8; }
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
           }
           @keyframes bounce {
             0%, 100% { transform: translateY(0); }
             50% { transform: translateY(-10px); }
           }
+          @keyframes slideIn {
+            from { opacity: 0; transform: translateX(-20px); }
+            to { opacity: 1; transform: translateX(0); }
+          }
+          @keyframes slideInRight {
+            from { opacity: 0; transform: translateX(20px); }
+            to { opacity: 1; transform: translateX(0); }
+          }
+          @keyframes twinkle {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 0.8; }
+          }
         `}</style>
-      </Container>
+      </div>
     );
   };
 
@@ -928,7 +1455,7 @@ const KBCViva: React.FC = () => {
         <!DOCTYPE html>
         <html>
         <head>
-          <title>Viva Performance Report - ${userName}</title>
+          <title>Viva Performance Report - ${employee?.name || 'Candidate'}</title>
           <style>
             body { font-family: Arial, sans-serif; padding: 40px; max-width: 800px; margin: auto; }
             .header { text-align: center; border-bottom: 3px solid #333; padding-bottom: 20px; margin-bottom: 30px; }
@@ -958,7 +1485,9 @@ const KBCViva: React.FC = () => {
         <body>
           <div class="header">
             <h1>🎓 Viva Performance Report</h1>
-            <p><strong>Candidate:</strong> ${userName}</p>
+            <p><strong>Candidate:</strong> ${employee?.name || 'N/A'}</p>
+            <p><strong>Punch ID:</strong> ${employee?.punch_id || 'N/A'}</p>
+            <p><strong>Department:</strong> ${employee?.department || 'N/A'}</p>
             <p><strong>Topic:</strong> ${sourceName}</p>
             <p><strong>Date:</strong> ${reportDate} | <strong>Time:</strong> ${reportTime}</p>
             <p><strong>Language:</strong> ${language}</p>
@@ -1025,6 +1554,46 @@ const KBCViva: React.FC = () => {
       }}>
         <Row className="justify-content-center">
           <Col md={10} lg={8}>
+            {/* Employee Photo Header */}
+            {employee && (
+              <div className="text-center mb-4">
+                <div style={{
+                  width: '120px',
+                  height: '120px',
+                  borderRadius: '50%',
+                  margin: '0 auto',
+                  overflow: 'hidden',
+                  border: `5px solid ${percent >= 70 ? '#38ef7d' : percent >= 40 ? '#f5576c' : '#eb3349'}`,
+                  background: '#4caf50',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: 'white',
+                  fontSize: '48px',
+                  fontWeight: 'bold',
+                  boxShadow: '0 5px 30px rgba(0,0,0,0.4)'
+                }}>
+                  {employee.photo ? (
+                    <img 
+                      src={`https://hrm.umanerp.com/${employee.photo}`}
+                      alt={employee.name}
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                      onError={(e: any) => {
+                        e.target.style.display = 'none';
+                        e.target.parentElement.innerHTML = employee.name?.charAt(0)?.toUpperCase() || '?';
+                      }}
+                    />
+                  ) : (
+                    employee.name?.charAt(0)?.toUpperCase() || '?'
+                  )}
+                </div>
+                <h3 className="text-white mt-3 mb-0">{employee.name}</h3>
+                <p style={{ color: '#aaa' }}>
+                  {employee.designation} | {employee.department}
+                </p>
+              </div>
+            )}
+            
             {/* Avatar */}
             {renderAvatar()}
             

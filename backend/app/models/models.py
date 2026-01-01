@@ -4,9 +4,22 @@ db = SQLAlchemy()
 
 class Employee(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100), nullable=False)
-    role = db.Column(db.String(50), nullable=False)
-    machine = db.Column(db.String(50), nullable=False)
+    employee_id = db.Column(db.String(20), unique=True, nullable=False)  # HRM employeeId
+    full_name = db.Column(db.String(100), nullable=False)
+    father_name = db.Column(db.String(100))
+    company_name = db.Column(db.String(100))
+    department = db.Column(db.String(100))
+    designation = db.Column(db.String(100))
+    status = db.Column(db.String(50))
+    user_img = db.Column(db.String(200))
+    line_unit = db.Column(db.String(50))
+    date_of_joining = db.Column(db.String(50))
+    mobile_number = db.Column(db.String(20))
+    reporting_head = db.Column(db.String(100))
+    # For compatibility with old code
+    name = db.Column(db.String(100))
+    role = db.Column(db.String(50))
+    machine = db.Column(db.String(50))
     # ...existing code...
 
 class Score(db.Model):

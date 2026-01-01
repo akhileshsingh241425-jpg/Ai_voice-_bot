@@ -24,13 +24,27 @@ interface Evaluation {
   summary: string;
 }
 
+interface EmployeeInfo {
+  id: number;
+  punch_id: string;
+  name: string;
+  department: string;
+  designation: string;
+  company: string;
+  line_unit: string;
+  photo: string;
+}
+
 type Screen = 'setup' | 'interview' | 'result';
 
 const ChatViva: React.FC = () => {
   const [screen, setScreen] = useState<Screen>('setup');
   const [topics, setTopics] = useState<Topic[]>([]);
   const [selectedTopic, setSelectedTopic] = useState<Topic | null>(null);
-  const [userName, setUserName] = useState('');
+  const [punchId, setPunchId] = useState('');
+  const [employee, setEmployee] = useState<EmployeeInfo | null>(null);
+  const [lookupError, setLookupError] = useState('');
+  const [isLookingUp, setIsLookingUp] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [turn, setTurn] = useState(1);
   const [isRecording, setIsRecording] = useState(false);
@@ -65,6 +79,37 @@ const ChatViva: React.FC = () => {
     }
   };
 
+  // Lookup employee by Punch ID
+  const lookupEmployee = async () => {
+    if (!punchId.trim()) {
+      setLookupError('Punch ID डालें');
+      return;
+    }
+    
+    setIsLookingUp(true);
+    setLookupError('');
+    setEmployee(null);
+    
+    try {
+      const res = await axios.get(`${API_BASE}/training/employee/lookup?punch_id=${punchId.trim()}`);
+      if (res.data.success) {
+        setEmployee(res.data.employee);
+        setLookupError('');
+      } else {
+        setLookupError(res.data.error || 'Employee not found');
+      }
+    } catch (err: any) {
+      if (err.response?.status === 404) {
+        setLookupError('❌ Invalid Punch ID - Employee not found');
+      } else {
+        setLookupError('Server error. Please try again.');
+      }
+      console.error('Lookup error:', err);
+    } finally {
+      setIsLookingUp(false);
+    }
+  };
+
   // Text-to-Speech
   const speak = (text: string): Promise<void> => {
     return new Promise((resolve) => {
@@ -94,8 +139,8 @@ const ChatViva: React.FC = () => {
 
   // Start Interview
   const startInterview = async () => {
-    if (!selectedTopic || !userName.trim()) {
-      alert('Please select topic and enter your name');
+    if (!selectedTopic || !employee) {
+      alert('Please verify your Punch ID and select a topic');
       return;
     }
 
@@ -105,7 +150,8 @@ const ChatViva: React.FC = () => {
     try {
       const res = await axios.post(`${API_BASE}/chat-viva/start`, {
         topic_id: selectedTopic.id,
-        user_name: userName,
+        user_name: employee.name,
+        employee_id: employee.punch_id,
         language: 'Hindi'
       });
 
@@ -116,7 +162,7 @@ const ChatViva: React.FC = () => {
       await speak(aiMessage);
     } catch (err) {
       console.error('Failed to start:', err);
-      const fallback = `नमस्ते ${userName}! आइए ${selectedTopic.name} के बारे में बात करते हैं। बताइए, आप क्या काम करते हैं?`;
+      const fallback = `नमस्ते ${employee.name}! आइए ${selectedTopic.name} के बारे में बात करते हैं। बताइए, आप क्या काम करते हैं?`;
       setMessages([{ role: 'ai', text: fallback, timestamp: new Date() }]);
       await speak(fallback);
     } finally {
@@ -262,7 +308,10 @@ const ChatViva: React.FC = () => {
       <body>
         <div class="header">
           <h1>🎤 Conversational Interview Report</h1>
-          <p><strong>Candidate:</strong> ${userName}</p>
+          <p><strong>Punch ID:</strong> ${employee?.punch_id || ''}</p>
+          <p><strong>Name:</strong> ${employee?.name || ''}</p>
+          <p><strong>Department:</strong> ${employee?.department || ''}</p>
+          <p><strong>Designation:</strong> ${employee?.designation || ''}</p>
           <p><strong>Topic:</strong> ${selectedTopic?.name}</p>
           <p><strong>Date:</strong> ${new Date().toLocaleString()}</p>
         </div>
@@ -306,16 +355,69 @@ const ChatViva: React.FC = () => {
                     Natural conversation style - Just talk!
                   </p>
 
+                  {/* Punch ID Input */}
                   <div className="mb-4">
-                    <label className="form-label fw-bold">👤 Your Name</label>
-                    <input
-                      type="text"
-                      className="form-control form-control-lg"
-                      placeholder="Enter your name..."
-                      value={userName}
-                      onChange={(e) => setUserName(e.target.value)}
-                    />
+                    <label className="form-label fw-bold">🔢 Punch ID डालें</label>
+                    <div className="input-group">
+                      <input
+                        type="text"
+                        className="form-control form-control-lg"
+                        placeholder="अपना Punch ID डालें..."
+                        value={punchId}
+                        onChange={(e) => {
+                          setPunchId(e.target.value);
+                          setEmployee(null);
+                          setLookupError('');
+                        }}
+                        onKeyPress={(e) => e.key === 'Enter' && lookupEmployee()}
+                      />
+                      <button 
+                        className="btn btn-primary" 
+                        type="button"
+                        onClick={lookupEmployee}
+                        disabled={isLookingUp}
+                      >
+                        {isLookingUp ? '...' : 'Verify'}
+                      </button>
+                    </div>
+                    {lookupError && (
+                      <div className="text-danger mt-2 small">{lookupError}</div>
+                    )}
                   </div>
+
+                  {/* Employee Details Card */}
+                  {employee && (
+                    <div className="mb-4 p-3 rounded" style={{ background: '#e8f5e9', border: '1px solid #4caf50' }}>
+                      <div className="d-flex align-items-center">
+                        <div style={{ 
+                          width: '60px', 
+                          height: '60px', 
+                          borderRadius: '50%', 
+                          background: '#4caf50',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          color: 'white',
+                          fontSize: '24px',
+                          marginRight: '15px'
+                        }}>
+                          {employee.photo ? (
+                            <img src={employee.photo} alt="" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
+                          ) : (
+                            employee.name.charAt(0).toUpperCase()
+                          )}
+                        </div>
+                        <div>
+                          <div className="fw-bold text-success">✓ Verified</div>
+                          <div className="fw-bold" style={{ fontSize: '18px' }}>{employee.name}</div>
+                          <div className="text-muted small">
+                            {employee.designation} | {employee.department}
+                          </div>
+                          <div className="text-muted small">{employee.company}</div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   <div className="mb-4">
                     <label className="form-label fw-bold">📚 Select Topic</label>
@@ -345,7 +447,7 @@ const ChatViva: React.FC = () => {
                     size="lg"
                     className="w-100"
                     onClick={startInterview}
-                    disabled={!selectedTopic || !userName.trim()}
+                    disabled={!selectedTopic || !employee}
                   >
                     🎙️ Start Voice Interview
                   </Button>

@@ -1,6 +1,7 @@
 from flask import Flask
 from flask_cors import CORS
 from app.models.models import db
+import os
 
 # Core Routes - Only what's being used
 from app.routes.main import main_bp
@@ -11,15 +12,19 @@ from app.routes.training import training_bp
 from app.routes.qa_bank_new import qa_bank_new_bp
 from app.routes.viva_session import viva_session_bp
 from app.routes.chat_viva import chat_viva_bp
+from app.routes.viva_records import viva_records_bp
 
 def create_app():
     app = Flask(__name__)
     app.config.from_object('config.Config')
     
+    # Get allowed origins from environment or use defaults
+    allowed_origins = os.environ.get('CORS_ORIGINS', 'http://localhost:3000,http://127.0.0.1:3000').split(',')
+    
     # Enable CORS for frontend integration
     CORS(app, resources={
         r"/*": {
-            "origins": ["http://localhost:3000", "http://127.0.0.1:3000"],
+            "origins": allowed_origins,
             "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
             "allow_headers": ["Content-Type", "Authorization"]
         }
@@ -34,6 +39,7 @@ def create_app():
     app.register_blueprint(qa_bank_new_bp)  # Q&A Bank per topic
     app.register_blueprint(viva_session_bp)  # Viva sessions
     app.register_blueprint(chat_viva_bp)  # Conversational Voice Interview
+    app.register_blueprint(viva_records_bp)  # Viva records with video
 
     db.init_app(app)
     

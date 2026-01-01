@@ -93,6 +93,17 @@ def get_viva_questions(topic_id):
     conn = get_db()
     cursor = conn.cursor()
     
+    # Check if questions exist in requested language
+    cursor.execute("""
+        SELECT COUNT(*) as cnt FROM qa_bank_new 
+        WHERE topic_id = %s AND language = %s AND is_active = TRUE
+    """, (topic_id, language))
+    lang_count = cursor.fetchone()['cnt']
+    
+    # Fallback to other language if no questions in requested language
+    if lang_count == 0:
+        language = 'EN' if language == 'HI' else 'HI'
+    
     # Get questions by level - 40% Easy, 35% Medium, 25% Hard
     level1_count = int(count * 0.4)
     level2_count = int(count * 0.35)
@@ -109,6 +120,17 @@ def get_viva_questions(topic_id):
             LIMIT %s
         """, (topic_id, level, language, needed))
         questions.extend(cursor.fetchall())
+    
+    # If still not enough questions, get any questions from this topic
+    if len(questions) < count:
+        cursor.execute("""
+            SELECT id, question, expected_answer, level, language
+            FROM qa_bank_new
+            WHERE topic_id = %s AND is_active = TRUE
+            ORDER BY RAND()
+            LIMIT %s
+        """, (topic_id, count))
+        questions = cursor.fetchall()
     
     random.shuffle(questions)
     conn.close()

@@ -9,6 +9,7 @@ import Dashboard from './components/Dashboard';
 import KBCViva from './components/KBCViva';
 import ChatViva from './components/ChatViva';
 import TrainingQABank from './components/TrainingQABank';
+import VivaRecords from './components/VivaRecords';
 
 import './App.css';
 
@@ -22,6 +23,9 @@ function App() {
           
           {/* Conversational Voice Interview (Full screen) */}
           <Route path="/chat-viva" element={<ChatViva />} />
+          
+          {/* Viva Records Dashboard (Full screen) */}
+          <Route path="/viva-records" element={<VivaRecords />} />
           
           {/* Regular routes with navigation */}
           <Route path="/*" element={

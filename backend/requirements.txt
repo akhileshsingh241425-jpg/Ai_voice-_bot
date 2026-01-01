@@ -1,5 +1,6 @@
 Flask
 Flask-SQLAlchemy
+Flask-CORS
 openai-whisper
 soundfile
 sentence-transformers
@@ -7,3 +8,10 @@ transformers
 nltk
 torch
 accelerate
+python-dotenv
+gunicorn
+pymysql
+requests
+pandas
+openpyxl
+faster-whisper
