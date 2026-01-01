@@ -28,9 +28,9 @@ def lookup_employee_by_punch():
     # Search by employee_id (punch number)
     cursor.execute("""
         SELECT id, employee_id, full_name, department, designation, company_name, 
-               line_unit, reporting_head, status, user_img
+               status, user_img
         FROM employee 
-        WHERE employee_id = %s AND status = 'Approved'
+        WHERE employee_id = %s AND status = 'active'
     """, (punch_id,))
     
     employee = cursor.fetchone()
@@ -46,8 +46,6 @@ def lookup_employee_by_punch():
                 'department': employee['department'],
                 'designation': employee['designation'],
                 'company': employee['company_name'],
-                'line_unit': employee['line_unit'],
-                'reporting_head': employee['reporting_head'],
                 'photo': employee['user_img']
             }
         })
