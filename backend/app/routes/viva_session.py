@@ -10,7 +10,7 @@ from flask import Blueprint, request, jsonify
 import json
 import uuid
 from datetime import datetime
-import pymysql
+from app.db_config import get_db
 
 viva_session_bp = Blueprint('viva_session', __name__)
 
@@ -19,14 +19,7 @@ active_sessions = {}
 
 
 def get_db_connection():
-    return pymysql.connect(
-        host='localhost',
-        user='root',
-        password='root',
-        database='ai_voice_bot_new',
-        port=3306,
-        cursorclass=pymysql.cursors.DictCursor
-    )
+    return get_db()
 
 
 def evaluate_answer_semantic(user_answer, expected_answer, question):

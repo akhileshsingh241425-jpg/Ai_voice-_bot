@@ -8,6 +8,7 @@ Conversational Voice Viva API
 from flask import Blueprint, request, jsonify
 import requests
 import re
+from app.db_config import get_db
 
 chat_viva_bp = Blueprint('chat_viva', __name__)
 
@@ -16,9 +17,7 @@ MODEL_NAME = "gemma3:1b"
 
 def get_topic_context(topic_id):
     """Get topic info and sample questions for context"""
-    import pymysql
-    conn = pymysql.connect(host='localhost', user='root', password='root', 
-                          database='ai_voice_bot_new', port=3306)
+    conn = get_db()
     cursor = conn.cursor()
     
     # Get topic name

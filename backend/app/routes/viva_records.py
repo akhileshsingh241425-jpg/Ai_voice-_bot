@@ -6,11 +6,11 @@ Viva Records API
 """
 
 from flask import Blueprint, request, jsonify, send_file
-import pymysql
 import os
 import json
 from datetime import datetime
 from werkzeug.utils import secure_filename
+from app.db_config import get_db
 
 viva_records_bp = Blueprint('viva_records', __name__, url_prefix='/viva-records')
 
@@ -19,16 +19,6 @@ UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__f
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 ALLOWED_EXTENSIONS = {'webm', 'mp4', 'avi', 'mkv'}
-
-def get_db():
-    return pymysql.connect(
-        host='localhost',
-        user='root',
-        password='root',
-        database='ai_voice_bot_new',
-        port=3306,
-        cursorclass=pymysql.cursors.DictCursor
-    )
 
 
 def allowed_file(filename):

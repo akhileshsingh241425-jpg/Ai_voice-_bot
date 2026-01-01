@@ -8,23 +8,12 @@ from flask import Blueprint, request, jsonify
 from werkzeug.utils import secure_filename
 import os
 import json
+from app.db_config import get_db
 
 qa_bank_new_bp = Blueprint('qa_bank_new', __name__)
 
 UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'uploads')
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-
-
-def get_db():
-    import pymysql
-    return pymysql.connect(
-        host='localhost',
-        user='root',
-        password='root',
-        database='ai_voice_bot_new',
-        port=3306,
-        cursorclass=pymysql.cursors.DictCursor
-    )
 
 
 @qa_bank_new_bp.route('/qa/topics-stats', methods=['GET'])

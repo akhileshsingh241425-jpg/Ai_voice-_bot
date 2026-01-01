@@ -5,20 +5,9 @@ Training Management API Routes
 """
 
 from flask import Blueprint, request, jsonify
-import pymysql
+from app.db_config import get_db
 
 training_bp = Blueprint('training', __name__, url_prefix='/training')
-
-
-def get_db():
-    return pymysql.connect(
-        host='localhost',
-        user='root',
-        password='root',
-        database='ai_voice_bot_new',
-        port=3306,
-        cursorclass=pymysql.cursors.DictCursor
-    )
 
 
 # ============================================
