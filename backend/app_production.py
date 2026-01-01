@@ -13,7 +13,7 @@ from app.routes.stt import stt_bp
 from app.routes.eval import eval_bp
 from app.routes.llm import llm_bp
 from app.routes.training import training_bp
-from app.routes.qa_bank_new import qa_bank_bp
+from app.routes.qa_bank_new import qa_bank_new_bp
 from app.routes.viva_session import viva_session_bp
 from app.routes.chat_viva import chat_viva_bp
 from app.routes.viva_records import viva_records_bp
@@ -28,7 +28,7 @@ app.register_blueprint(stt_bp, url_prefix='/stt')
 app.register_blueprint(eval_bp, url_prefix='/eval')
 app.register_blueprint(llm_bp, url_prefix='/llm')
 app.register_blueprint(training_bp, url_prefix='/training')
-app.register_blueprint(qa_bank_bp, url_prefix='/qa')
+app.register_blueprint(qa_bank_new_bp, url_prefix='/qa')
 app.register_blueprint(viva_session_bp, url_prefix='/viva')
 app.register_blueprint(chat_viva_bp, url_prefix='/chat-viva')
 app.register_blueprint(viva_records_bp, url_prefix='/viva-records')
