@@ -22,16 +22,16 @@ from app.routes.viva_records import viva_records_bp
 app = Flask(__name__, static_folder='../frontend_build', static_url_path='')
 CORS(app)
 
-# Register all API blueprints with /api prefix to not conflict with React
-app.register_blueprint(main_bp, url_prefix='/api')
-app.register_blueprint(stt_bp, url_prefix='/stt')
-app.register_blueprint(eval_bp, url_prefix='/eval')
-app.register_blueprint(llm_bp, url_prefix='/llm')
-app.register_blueprint(training_bp, url_prefix='/training')
-app.register_blueprint(qa_bank_new_bp, url_prefix='/qa')
-app.register_blueprint(viva_session_bp, url_prefix='/viva')
-app.register_blueprint(chat_viva_bp, url_prefix='/chat-viva')
-app.register_blueprint(viva_records_bp, url_prefix='/viva-records')
+# Register all API blueprints - NO PREFIX (routes already have their paths)
+app.register_blueprint(main_bp, url_prefix='/api')  # main_bp has "/" route
+app.register_blueprint(stt_bp)       # routes: /stt/*
+app.register_blueprint(eval_bp)      # routes: /eval/*
+app.register_blueprint(llm_bp)       # routes: /llm/*
+app.register_blueprint(training_bp)  # routes: /training/*
+app.register_blueprint(qa_bank_new_bp)  # routes: /qa/*
+app.register_blueprint(viva_session_bp) # routes: /viva/*
+app.register_blueprint(chat_viva_bp)    # routes: /chat-viva/*
+app.register_blueprint(viva_records_bp) # routes: /viva-records/*
 
 # Serve React App - this MUST come after blueprint registration
 @app.route('/')
