@@ -79,6 +79,10 @@ print_status "Directories created"
 print_step "6/10" "Installing Python Dependencies"
 cd $APP_DIR/backend
 
+# Create virtual environment
+python3 -m venv venv
+source venv/bin/activate
+
 # Create requirements if not exists
 if [ ! -f "requirements.txt" ]; then
     cat > requirements.txt << 'EOF'
@@ -99,7 +103,8 @@ gunicorn==21.2.0
 EOF
 fi
 
-pip3 install -r requirements.txt -q
+pip install --upgrade pip
+pip install -r requirements.txt
 print_status "Python dependencies installed"
 
 # ============ STEP 7: Build Frontend ============
@@ -133,7 +138,7 @@ module.exports = {
   apps: [{
     name: '$APP_NAME',
     script: 'app_production.py',
-    interpreter: 'python3',
+    interpreter: '$APP_DIR/backend/venv/bin/python',
     cwd: '$APP_DIR/backend',
     env: {
       PORT: $PORT,
