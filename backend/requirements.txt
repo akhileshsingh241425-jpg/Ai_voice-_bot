@@ -15,3 +15,4 @@ requests
 pandas
 openpyxl
 faster-whisper
+google-generativeai

@@ -2,9 +2,18 @@ from flask import Blueprint, request, jsonify
 
 llm_bp = Blueprint('llm', __name__)
 
-# Lazy loading - import only when needed (using Ollama now)
+# Lazy loading - Use Gemini for production (FREE, cloud-based), Ollama for local dev
 def get_llm_functions():
-    from ai.llm.ollama_llm import generate_next_question, evaluate_user_answer
+    import os
+    use_gemini = os.getenv('USE_GEMINI', 'true').lower() == 'true'
+    
+    if use_gemini:
+        print("[LLM] Using Google Gemini API (Production)")
+        from ai.llm.gemini_llm import generate_next_question, evaluate_user_answer
+    else:
+        print("[LLM] Using Ollama (Local Development)")
+        from ai.llm.ollama_llm import generate_next_question, evaluate_user_answer
+    
     return generate_next_question, evaluate_user_answer
 
 @llm_bp.route('/next_question', methods=['POST'])
@@ -155,7 +164,13 @@ def evaluate_with_answer():
         "language": "Hindi" 
     }
     """
-    from ai.llm.ollama_llm import evaluate_with_correct_answer
+    # Try Gemini API first (production), fallback to Ollama (local dev)
+    try:
+        from ai.llm.gemini_llm import evaluate_with_correct_answer
+        print("[LLM] Using Google Gemini API (production mode)")
+    except ImportError:
+        from ai.llm.ollama_llm import evaluate_with_correct_answer
+        print("[LLM] Using Ollama (local development mode)")
     
     data = request.json
     question = data.get('question', '')
@@ -172,7 +187,6 @@ def evaluate_with_answer():
         return jsonify({'error': 'question and expected_answer are required'}), 400
     
     try:
-        print("[LLM EVALUATION] Calling Ollama LLM (gemma3:1b)...")
         result = evaluate_with_correct_answer(topic, question, user_answer, expected_answer, language)
         print(f"[LLM EVALUATION] ✅ Score: {result.get('score')}, Correct: {result.get('is_correct')}")
         return jsonify(result)

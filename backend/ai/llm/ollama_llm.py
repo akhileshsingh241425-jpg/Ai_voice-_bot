@@ -896,23 +896,37 @@ def evaluate_with_correct_answer(topic: str, question: str, user_answer: str, ex
         }
     
     # Multilingual evaluation prompt - ignore language differences, match meaning
-    prompt = f"""You are evaluating an answer. The candidate may answer in ANY language (Hindi, English, Hinglish, mix, etc.)
-Your job is to check if the MEANING matches, NOT the language.
+    prompt = f"""You are an EXPERT evaluator checking if two answers have the SAME MEANING.
 
-Question: {question}
-Expected Answer (Reference): {expected_answer}
-Candidate's Answer: {user_answer}
+**CRITICAL RULES:**
+1. IGNORE language differences (Hindi, English, Hinglish - ALL are acceptable)
+2. IGNORE spelling mistakes and grammar errors
+3. IGNORE word order differences
+4. CHECK ONLY if the CORE CONCEPT and MEANING match
+5. Different words with SAME meaning = CORRECT answer
+6. Example: "सूर्य की रोशनी से पौधे भोजन बनाते हैं" = "Plants make food using sunlight" = "Photosynthesis process" - ALL CORRECT
 
-IMPORTANT RULES:
-- If candidate says same thing in different language, it is CORRECT
-- Example: "photosynthesis" = "प्रकाश संश्लेषण" = "light se food banana" - all are SAME meaning
-- Match CONCEPT and MEANING, ignore language/grammar/spelling
-- Partial credit for partially correct answers
+**Question:** {question}
 
-Evaluate semantic match:
-MATCH: YES/PARTIAL/NO
-SCORE: 0-100 (100=perfect match in any language, 50=partial, 0=wrong)
-FEEDBACK: One line feedback in {language}"""
+**Reference Answer (Expected):** {expected_answer}
+
+**Candidate's Answer:** {user_answer}
+
+**YOUR TASK:**
+Compare the MEANING and CONCEPT of both answers. Are they talking about the SAME thing?
+
+**OUTPUT FORMAT (strictly follow):**
+MATCH: [YES/PARTIAL/NO]
+SCORE: [0-100 number only]
+FEEDBACK: [One short line in {language}]
+
+**SCORING GUIDE:**
+- 90-100: Same meaning, all key points covered (even if different words/language)
+- 70-89: Same main concept, minor details missing
+- 40-69: Partially correct, some key points present
+- 0-39: Wrong concept or completely different meaning
+
+Now evaluate:"""
 
     try:
         response = requests.post(
@@ -932,25 +946,51 @@ FEEDBACK: One line feedback in {language}"""
         result = response.json().get("response", "")
         
         # Parse response
-        is_match = "YES" in result.upper().split("MATCH:")[-1].split("\n")[0] if "MATCH:" in result.upper() else False
-        is_partial = "PARTIAL" in result.upper()
+        result_upper = result.upper()
         
-        score = 50
+        # Check for MATCH status
+        is_match = False
+        is_partial = False
+        
+        if "MATCH:" in result_upper:
+            match_line = result_upper.split("MATCH:")[-1].split("\n")[0].strip()
+            is_match = "YES" in match_line
+            is_partial = "PARTIAL" in match_line
+        
+        # Extract score
+        score = 50  # default
         score_match = re.search(r'SCORE:\s*(\d+)', result, re.IGNORECASE)
         if score_match:
             score = min(100, max(0, int(score_match.group(1))))
+        else:
+            # If no score found, guess from MATCH status
+            if is_match:
+                score = 85
+            elif is_partial:
+                score = 55
+            else:
+                score = 25
         
+        # Extract feedback
         feedback = "जवाब का मूल्यांकन हो गया।"
-        feedback_match = re.search(r'FEEDBACK:\s*(.+)', result, re.IGNORECASE)
+        feedback_match = re.search(r'FEEDBACK:\s*(.+)', result, re.IGNORECASE | re.DOTALL)
         if feedback_match:
-            feedback = feedback_match.group(1).strip()
+            feedback_text = feedback_match.group(1).strip()
+            # Take only first line
+            feedback = feedback_text.split('\n')[0].strip()
+        
+        # Determine correctness based on score
+        is_correct = score >= 70
+        is_partial_final = (score >= 40 and score < 70) or is_partial
+        
+        print(f"[EVALUATION] Match: {is_match}, Score: {score}, Correct: {is_correct}, Partial: {is_partial_final}")
         
         return {
-            "is_correct": is_match and score >= 70,
-            "is_partial": is_partial or (40 <= score < 70),
+            "is_correct": is_correct,
+            "is_partial": is_partial_final,
             "score": score,
             "feedback": feedback,
-            "correct_answer": expected_answer if score < 70 else None,
+            "correct_answer": expected_answer if not is_correct else None,
             "user_said": user_answer
         }
         
