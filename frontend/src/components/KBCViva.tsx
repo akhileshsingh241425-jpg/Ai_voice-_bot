@@ -712,38 +712,86 @@ const KBCViva: React.FC = () => {
     
     return (
       <div className="text-center mb-4">
-        {/* Avatar Circle */}
+        {/* Avatar Circle with Glow Effect */}
         <div style={{
-          width: '150px',
-          height: '150px',
-          borderRadius: '50%',
-          background: style.bg,
-          margin: '0 auto',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontSize: '4rem',
-          boxShadow: '0 10px 40px rgba(0,0,0,0.3)',
-          animation: style.animation,
-          border: '4px solid white',
+          position: 'relative',
+          width: '180px',
+          height: '180px',
+          margin: '0 auto 20px',
         }}>
-          {style.emoji}
+          {/* Outer Glow Ring */}
+          <div style={{
+            position: 'absolute',
+            top: '-10px',
+            left: '-10px',
+            right: '-10px',
+            bottom: '-10px',
+            borderRadius: '50%',
+            background: style.bg,
+            opacity: 0.3,
+            filter: 'blur(20px)',
+            animation: style.animation,
+          }}></div>
+          
+          {/* Main Avatar */}
+          <div style={{
+            position: 'relative',
+            width: '100%',
+            height: '100%',
+            borderRadius: '50%',
+            background: style.bg,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '5.5rem',
+            boxShadow: '0 15px 50px rgba(102, 126, 234, 0.4), inset 0 -5px 20px rgba(0,0,0,0.1)',
+            animation: style.animation,
+            border: '6px solid rgba(255, 255, 255, 0.9)',
+            transform: 'translateZ(0)', // Hardware acceleration
+          }}>
+            <span style={{
+              filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.3))',
+            }}>
+              {style.emoji}
+            </span>
+          </div>
+          
+          {/* Role Badge */}
+          <div style={{
+            position: 'absolute',
+            bottom: '5px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            background: 'linear-gradient(135deg, #667eea, #764ba2)',
+            color: 'white',
+            padding: '6px 18px',
+            borderRadius: '20px',
+            fontSize: '0.75rem',
+            fontWeight: '700',
+            textTransform: 'uppercase',
+            letterSpacing: '1px',
+            boxShadow: '0 4px 15px rgba(102, 126, 234, 0.4)',
+            border: '2px solid white',
+          }}>
+            🎯 TRAINER
+          </div>
         </div>
         
         {/* Speech Bubble */}
         {hostMessage && (
           <div style={{
-            background: 'white',
+            background: 'linear-gradient(135deg, #ffffff 0%, #f8f9ff 100%)',
             borderRadius: '20px',
-            padding: '15px 25px',
-            margin: '20px auto',
+            padding: '18px 28px',
+            margin: '10px auto',
             maxWidth: '500px',
-            boxShadow: '0 5px 20px rgba(0,0,0,0.1)',
+            boxShadow: '0 8px 30px rgba(102, 126, 234, 0.15)',
             position: 'relative',
+            border: '2px solid rgba(102, 126, 234, 0.1)',
           }}>
             <div style={{
               position: 'absolute',
-              top: '-10px',
+              top: '-12px',
               left: '50%',
               transform: 'translateX(-50%)',
               width: 0,

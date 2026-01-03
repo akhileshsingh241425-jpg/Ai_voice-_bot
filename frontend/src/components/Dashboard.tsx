@@ -87,10 +87,10 @@ const Dashboard: React.FC = () => {
       <Row className="mb-4">
         <Col>
           <h1 className="display-4">
-            🎓 AI Training Viva System
+            🎓 AI Voice Interview System
           </h1>
           <p className="lead text-muted">
-            Training Topic Based Voice Viva - Solar Panel Manufacturing
+            Intelligent Voice-Based Training & Assessment Platform
           </p>
         </Col>
       </Row>
@@ -161,38 +161,23 @@ const Dashboard: React.FC = () => {
             </Card.Header>
             <Card.Body>
               <Row>
-                {/* KBC Style Viva - Main Feature */}
-                <Col md={6} className="mb-3">
+                {/* AI Voice Interview - Main Feature */}
+                <Col md={12} className="mb-3">
                   <div className="d-grid">
                     <Link to="/kbc-viva">
                       <Button variant="warning" size="lg" className="w-100 py-4" style={{
                         background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', 
                         border: 'none', 
-                        fontSize: '1.3rem',
+                        fontSize: '1.5rem',
                         color: 'white'
                       }}>
-                        🎬 Start KBC Style Viva
-                        <br/><small style={{fontSize: '0.8rem'}}>Avatar + Voice + Real-time LLM</small>
+                        🎤 Start AI Voice Interview
+                        <br/><small style={{fontSize: '0.85rem'}}>Interactive Voice-Based Assessment with AI Trainer</small>
                       </Button>
                     </Link>
                   </div>
                 </Col>
-                
-                <Col md={6} className="mb-3">
-                  <div className="d-grid">
-                    <Link to="/qa-bank">
-                      <Button variant="info" size="lg" className="w-100 py-4" style={{
-                        background: 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)', 
-                        border: 'none',
-                        fontSize: '1.3rem',
-                        color: 'white'
-                      }}>
-                        📝 Manage Q&A Bank
-                        <br/><small style={{fontSize: '0.8rem'}}>Upload Excel per Topic</small>
-                      </Button>
-                    </Link>
-                  </div>
-                </Col>
+
               </Row>
             </Card.Body>
           </Card>

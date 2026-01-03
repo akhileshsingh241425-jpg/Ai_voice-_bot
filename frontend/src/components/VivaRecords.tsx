@@ -1,6 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Container, Row, Col, Card, Table, Badge, Button, Modal, Form, Spinner, Alert } from 'react-bootstrap';
 
+// API Base URL - same as other components
+const API_BASE_URL = process.env.REACT_APP_API_URL || (
+  process.env.NODE_ENV === 'production' ? '' : 'http://localhost:5000'
+);
+
 interface VivaRecord {
   id: number;
   employee_id: string;
@@ -48,7 +53,7 @@ const VivaRecords: React.FC = () => {
   const loadRecords = async () => {
     try {
       setLoading(true);
-      const response = await fetch('http://localhost:5000/viva-records/list');
+      const response = await fetch(`${API_BASE_URL}/viva-records/list`);
       const data = await response.json();
       if (data.success) {
         setRecords(data.records || []);
