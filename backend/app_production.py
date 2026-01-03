@@ -23,7 +23,7 @@ from app.routes.chat_viva import chat_viva_bp
 from app.routes.viva_records import viva_records_bp
 
 # Create Flask app
-app = Flask(__name__, static_folder='../frontend_build', static_url_path='')
+app = Flask(__name__, static_folder='../frontend/build', static_url_path='')
 CORS(app)
 
 # Register all API blueprints - NO PREFIX (routes already have their paths)
