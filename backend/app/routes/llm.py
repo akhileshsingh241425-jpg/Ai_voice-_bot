@@ -164,13 +164,19 @@ def evaluate_with_answer():
         "language": "Hindi" 
     }
     """
-    # Try Gemini API first (production), fallback to Ollama (local dev)
-    try:
+    # Load environment variable to choose LLM
+    import os
+    from dotenv import load_dotenv
+    load_dotenv()  # Load .env file
+    
+    use_gemini = os.getenv('USE_GEMINI', 'true').lower() == 'true'
+    
+    if use_gemini:
         from ai.llm.gemini_llm import evaluate_with_correct_answer
-        print("[LLM] Using Google Gemini API (production mode)")
-    except ImportError:
+        print("[LLM EVALUATION] Using Google Gemini API ✅")
+    else:
         from ai.llm.ollama_llm import evaluate_with_correct_answer
-        print("[LLM] Using Ollama (local development mode)")
+        print("[LLM EVALUATION] Calling Ollama LLM (gemma3:1b)")
     
     data = request.json
     question = data.get('question', '')

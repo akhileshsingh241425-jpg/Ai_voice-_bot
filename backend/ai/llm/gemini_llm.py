@@ -6,9 +6,13 @@ FREE API with high quota - works on production server
 import os
 import re
 import google.generativeai as genai
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 # Configure API key from environment
-API_KEY = os.getenv('GEMINI_API_KEY', 'AIzaSyDu9gVGZdCVVq_S0XYHuZJFVp3i9gKkdJo')  # Free tier
+API_KEY = os.getenv('GEMINI_API_KEY', 'AIzaSyCY3CYMucV_ok0inn7bqKh6yaUayJh6jDk')
 genai.configure(api_key=API_KEY)
 
 def evaluate_with_correct_answer(topic: str, question: str, user_answer: str, expected_answer: str, language: str = "Hindi") -> dict:
@@ -67,8 +71,8 @@ FEEDBACK: [One short encouraging line in {language}]
 Now evaluate:"""
 
     try:
-        # Use Gemini 1.5 Flash (fastest, free tier)
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        # Use Gemini 2.5 Flash (latest model)
+        model = genai.GenerativeModel('gemini-2.5-flash')
         response = model.generate_content(
             prompt,
             generation_config=genai.types.GenerationConfig(
