@@ -22,35 +22,39 @@ def lookup_employee_by_punch():
     if not punch_id:
         return jsonify({'success': False, 'error': 'Punch ID is required'}), 400
     
-    conn = get_db()
-    cursor = conn.cursor()
-    
-    # Search by employee_id (punch number)
-    cursor.execute("""
-        SELECT id, employee_id, full_name, department, designation, company_name, 
-               status, user_img
-        FROM employee 
-        WHERE employee_id = %s AND status = 'active'
-    """, (punch_id,))
-    
-    employee = cursor.fetchone()
-    conn.close()
-    
-    if employee:
-        return jsonify({
-            'success': True,
-            'employee': {
-                'id': employee['id'],
-                'punch_id': employee['employee_id'],
-                'name': employee['full_name'],
-                'department': employee['department'],
-                'designation': employee['designation'],
-                'company': employee['company_name'],
-                'photo': employee['user_img']
-            }
-        })
-    else:
-        return jsonify({'success': False, 'error': 'Employee not found'}), 404
+    try:
+        conn = get_db()
+        cursor = conn.cursor()
+        
+        # Search by employee_id (punch number)
+        cursor.execute("""
+            SELECT id, employee_id, full_name, department, designation, company_name, 
+                   status, user_img
+            FROM employee 
+            WHERE employee_id = %s
+        """, (punch_id,))
+        
+        employee = cursor.fetchone()
+        cursor.close()
+        conn.close()
+        
+        if employee:
+            return jsonify({
+                'success': True,
+                'employee': {
+                    'id': employee.get('id'),
+                    'punch_id': employee.get('employee_id'),
+                    'name': employee.get('full_name'),
+                    'department': employee.get('department'),
+                    'designation': employee.get('designation'),
+                    'company': employee.get('company_name'),
+                    'photo': employee.get('user_img')
+                }
+            })
+        else:
+            return jsonify({'success': False, 'error': 'Employee not found'}), 404
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 
 # ============================================
