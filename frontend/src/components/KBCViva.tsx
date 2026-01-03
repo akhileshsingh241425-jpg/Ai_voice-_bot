@@ -171,6 +171,20 @@ const KBCViva: React.FC = () => {
     if (!isVideoEnabled) return;
     
     try {
+      // Check if HTTPS or localhost
+      if (!window.location.protocol.includes('https') && !window.location.hostname.includes('localhost')) {
+        alert('⚠️ Camera/Mic requires HTTPS or localhost.\nFor testing, use: http://localhost:9000');
+        setVideoButtonLabel('Camera (HTTPS required)');
+        return;
+      }
+
+      // Check if getUserMedia is available
+      if (!navigator.mediaDevices?.getUserMedia) {
+        alert('❌ Camera/Microphone not supported in this browser or connection.');
+        setVideoButtonLabel('Camera (Not available)');
+        return;
+      }
+
       // Get camera + audio stream - LOW RESOLUTION for compression
       const stream = await navigator.mediaDevices.getUserMedia({ 
         video: { 
