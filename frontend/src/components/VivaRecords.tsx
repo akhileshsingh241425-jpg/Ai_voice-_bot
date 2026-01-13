@@ -364,7 +364,7 @@ const VivaRecords: React.FC = () => {
               controls 
               width="100%" 
               style={{ maxHeight: '500px' }}
-              src={`http://localhost:5000/viva-records/video/${selectedRecord.id}`}
+              src={`${API_BASE_URL}/viva-records/video/${selectedRecord.id}`}
             >
               Your browser does not support video playback.
             </video>
