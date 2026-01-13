@@ -215,7 +215,7 @@ def get_record_detail(record_id):
 
 @viva_records_bp.route('/video/<int:record_id>', methods=['GET'])
 def get_video(record_id):
-    """Stream video for a viva record"""
+    """Stream video for a viva record with Range support"""
     conn = get_db()
     cursor = conn.cursor()
     
@@ -231,6 +231,50 @@ def get_video(record_id):
     if not os.path.exists(video_full_path):
         return jsonify({'success': False, 'error': 'Video file not found'}), 404
     
+    # Get file size
+    file_size = os.path.getsize(video_full_path)
+    
+    # Handle Range requests for video streaming
+    range_header = request.headers.get('Range')
+    
+    if range_header:
+        # Parse range header
+        byte_start = 0
+        byte_end = file_size - 1
+        
+        if range_header.startswith('bytes='):
+            range_spec = range_header[6:]
+            if '-' in range_spec:
+                parts = range_spec.split('-')
+                if parts[0]:
+                    byte_start = int(parts[0])
+                if parts[1]:
+                    byte_end = int(parts[1])
+        
+        # Ensure valid range
+        byte_end = min(byte_end, file_size - 1)
+        content_length = byte_end - byte_start + 1
+        
+        # Read the requested chunk
+        with open(video_full_path, 'rb') as f:
+            f.seek(byte_start)
+            data = f.read(content_length)
+        
+        # Return partial content
+        from flask import Response
+        response = Response(
+            data,
+            status=206,
+            mimetype='video/webm',
+            direct_passthrough=True
+        )
+        response.headers['Content-Range'] = f'bytes {byte_start}-{byte_end}/{file_size}'
+        response.headers['Accept-Ranges'] = 'bytes'
+        response.headers['Content-Length'] = content_length
+        response.headers['Cache-Control'] = 'no-cache'
+        return response
+    
+    # No range header - return full file
     return send_file(video_full_path, mimetype='video/webm')
 
 
